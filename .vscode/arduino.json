@@ -1,0 +1,4 @@
+{
+    "sketch": "LightController.ino",
+    "board": "arduino:avr:uno"
+}
