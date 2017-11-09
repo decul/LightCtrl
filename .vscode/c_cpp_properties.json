@@ -3,13 +3,18 @@
         {
             "name": "Win32",
             "includePath": [
-                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino"
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino",
+                "${workspaceRoot}",
+                "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\variants\\standard",
+                "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\wiring_digital.c"
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": false,
                 "path": [
                     "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino",
-                    "${workspaceRoot}"
+                    "${workspaceRoot}",
+                    "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\variants\\standard",
+                    "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\wiring_digital.c"
                 ]
             },
             "intelliSenseMode": "msvc-x64"

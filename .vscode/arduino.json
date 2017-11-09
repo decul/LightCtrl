@@ -1,4 +1,6 @@
 {
     "sketch": "LightController.ino",
-    "board": "arduino:avr:uno"
+    "board": "arduino:avr:uno",
+    "port": "COM3",
+    "output": "../build"
 }
