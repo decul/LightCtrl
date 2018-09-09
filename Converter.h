@@ -13,8 +13,7 @@ typedef struct {
     double v;       // a fraction between 0 and 1
 } HSV;
 
-static HSV rgbw2hsv(RGBW in);
-
-static RGBW hsv2rgbw(HSV in);
-
-static void test(int test);
+struct Converter {
+    static HSV rgbw2hsv(RGBW in);
+    static RGBW hsv2rgbw(HSV in);
+};

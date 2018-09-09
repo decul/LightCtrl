@@ -1,14 +1,14 @@
-#include "hsv2rgbw.h"
+#include "Converter.h"
 #include <USBAPI.h>
 
-HSV rgbw2hsv(RGBW in)
+HSV Converter::rgbw2hsv(RGBW in)
 {
     HSV         out;
     double      min, max, delta;
 
-    in.r += in.w;
-    in.g += in.w;
-    in.b += in.w;
+    // in.r += in.w;
+    // in.g += in.w;
+    // in.b += in.w;
 
     min = in.r < in.g ? in.r : in.g;
     min = min  < in.b ? min  : in.b;
@@ -57,7 +57,7 @@ HSV rgbw2hsv(RGBW in)
 }
 
 
-RGBW hsv2rgbw(HSV in)
+RGBW Converter::hsv2rgbw(HSV in)
 {
     double      hh, p, q, t, ff;
     long        i;
@@ -113,17 +113,13 @@ RGBW hsv2rgbw(HSV in)
         break;
     }
 
-    double min = out.r < out.g ? out.r : out.g;
-    min = min  < out.b ? min  : out.b;
+    // double min = out.r < out.g ? out.r : out.g;
+    // min = min  < out.b ? min  : out.b;
 
-    out.r -= min;
-    out.g -= min;
-    out.b -= min;
-    out.w = min;
+    // out.r -= min;
+    // out.g -= min;
+    // out.b -= min;
+    // out.w = min;
 
     return out;     
-}
-
-void test(int test) {
-    Serial.print(test);
 }
