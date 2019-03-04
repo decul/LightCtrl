@@ -1,6 +1,5 @@
 #include "Light.h"
 #include <USBAPI.h>
-#include "Converter.h"
 #include <math.h>
 
 Light::Light() {
@@ -11,80 +10,84 @@ Light::Light() {
 
 void Light::UpdateOutput() {
     for (int l = 0; l < 4; l++) {
-        if (rgbwValues[l] == 0.0)
+        if (!powerOn || lightColor[l] == 0.0)
             digitalWrite(ledPins[l], LOW);
-        else if (rgbwValues[l] == 1.0)
-            digitalWrite(ledPins[l], powerOn ? HIGH : LOW);
+        else if (lightColor[l] == 1.0)
+            digitalWrite(ledPins[l], HIGH);
         else {
-            int value = rgbwValues[l] * (ledMax[l] - ledMin[l]) + ledMin[l];
-            analogWrite(ledPins[l], powerOn ? value : LOW);
+            float c = lightColor[l];
+            float colorWithAlpha = alpha * c * c + (1.0 - alpha) * c;
+            int ledValue = colorWithAlpha * (ledMax[l] - ledMin[l]) + ledMin[l];
+            analogWrite(ledPins[l], ledValue);
         }
-        //Serial.print(rgbwValues[l]);
+        //Serial.print("%.02d", lightColor[l]);
         //Serial.print(" ");
     }
     //Serial.println();
 }
 
-void Light::IncreaseRgb(int color) {
-    double val = sqrt(rgbwValues[color]) + 0.02;
-    rgbwValues[color] = min(1.0, val * val + 0.01);
-    // if (rgbwValues[color] < 0.01)
-    //     rgbwValues[color] = 0.01;
 
-    // rgbwValues[color] *= 1.05;
-    if (rgbwValues[color] > 1.0)
-        rgbwValues[color] = 1.0;
+void Light::Brighten() {
+
+}
+
+void Light::Brighten(int index) {
+    lightColor[index] += 0.04;
+    if (lightColor[index] > 1.0)
+        lightColor[index] = 1.0;
     UpdateOutput();
 }
 
-void Light::DecreaseRgb(int color) {
-    double val = max(0.0, sqrt(rgbwValues[color]) - 0.02);
-    rgbwValues[color] = max(0.0, val * val - 0.01);
-    //rgbwValues[color] /= 1.05;
+void Light::Darken() {
+
+}
+
+void Light::Darken(int index) {
+    lightColor[index] -= 0.04;
+    if (lightColor[index] < 0.0)
+        lightColor[index] = 0.0;
     UpdateOutput();
 }
 
-void Light::SwitchRgb(int color) {
-    if (rgbwValues[color] > 0.0)
-        rgbwValues[color] = 0.0;
+
+void Light::Switch(int index) {
+    if (lightColor[index] > 0.0)
+        lightColor[index] = 0.0;
     else
-        rgbwValues[color] = 1.0;
+        lightColor[index] = 1.0;
     UpdateOutput();
 }
 
-void Light::SetRgbw(double* rgbw) {
+
+void Light::SetColor(int index, float value) {
+    if (value > 1.0)
+        value = (value - 2.0) / 100.0;
+    lightColor[index] = value;
+    UpdateOutput();
+}
+
+void Light::SetColor(float* rgbw) {
     for (int i = 0; i < 4; i++)
-        rgbwValues[i] = rgbw[i];
+        lightColor[i] = rgbw[i];
     UpdateOutput();
 }
 
-void Light::ChangeHue(int sign) {
-    HSV hsv = Converter::rgbw2hsv({rgbwValues[0], rgbwValues[1], rgbwValues[2], 0});
-    hsv.h += 2 * sign ? -1 : 1;
-    RGBW col = Converter::hsv2rgbw(hsv);
-    rgbwValues[0] = col.r;
-    rgbwValues[1] = col.g;
-    rgbwValues[2] = col.b;
-    UpdateOutput();
+byte Light::GetColor(int index) {
+    return lightColor[index];
 }
 
-void Light::ChangeValue(int sign) {
-    if (!sign) {
-        for (int i = 0; i < 4; i++) {
-            if (rgbwValues[i] > 0.97)
-                return;
-        }
-        for (int i = 0; i < 4; i++) 
-            rgbwValues[i] = sqrt(pow(rgbwValues[i], 2) * 1.2);
+String Light::GetColor() {
+    String str = "";
+    for (int l = 0; l < 4; l++) {
+        str += lightColor[l];
+        str += " ";
     }
-    else {
-        for (int i = 0; i < 4; i++)
-            rgbwValues[i] = sqrt(pow(rgbwValues[i], 2) / 1.2);
-    }
-    UpdateOutput();
+    return str;
 }
+
 
 void Light::Power(bool on) {
     powerOn = on;
     UpdateOutput();
 }
+
