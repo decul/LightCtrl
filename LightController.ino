@@ -3,6 +3,7 @@
 #include "Light.h"
 #include <Arduino.h>
 #include <RTClib.h>
+//#include <OneWire.h>
 
 RTC_DS1307 rtc;
 
@@ -12,6 +13,10 @@ long prevIRCode = 0;
 
 Light light;
 // Xmas xmas;
+
+
+//declare reset function @ address 0
+void (*reset) (void) = 0; 
 
 
 
@@ -41,7 +46,6 @@ void loop() {
     if (irrecv.decode(&irResult)) {
         //digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
         handleIrCode(irResult.value);
-        Serial.println(irResult.value, HEX);
         irrecv.resume(); // Receive the next value
     }
 }
@@ -49,6 +53,8 @@ void loop() {
 
 
 void handleIrCode(long code) {
+    Serial.println(code, HEX);
+
     switch (code) {
         case 0xFFA857:  light.Switch(0);     break;
         case 0xFF28D7:  light.Switch(1);     break;  
@@ -114,7 +120,7 @@ void serialEvent() {
 }
 
 void handleCommand(String input) {
-    String args[4];
+    String args[8];
     int argIndex = 0;
     
     while (input.length() > 0) {
@@ -151,7 +157,12 @@ void handleCommand(String input) {
     }
 
     else if (args[0] == "color") {
-        if (args[2].length() > 0)
+        if (args[4].length() > 0) {
+            for (int i = 0; i < 4; i++) {
+                light.SetColor(i, args[i + 1].toFloat());
+            }
+        }
+        else if (args[2].length() > 0)
             light.SetColor(args[1].toInt(), args[2].toFloat());
         else if (args[1].length() > 0)
             Serial.println(light.GetColor(args[1].toInt()));
@@ -169,6 +180,12 @@ void handleCommand(String input) {
         }
         else
             Serial.println(light.alpha);
+    }
+
+    else if (args[0] == "reset") {
+        Serial.println("=== Software Reset ===");
+        delay(20);
+        reset();
     }
 
     else {

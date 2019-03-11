@@ -1,6 +1,7 @@
 {
     "sketch": "LightController.ino",
-    "board": "arduino:avr:uno",
-    "port": "COM3",
-    "output": "../build"
+    "board": "arduino:avr:mega",
+    "port": "COM4",
+    "output": "../build",
+    "configuration": "cpu=atmega2560"
 }
