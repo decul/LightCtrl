@@ -7,11 +7,14 @@
 
 RTC_DS1307 rtc;
 
-IRrecv irrecv(7);
+// Uncomment #define IR_USE_TIMER5 in ...\IRremote\boarddefs.h to use timer from pin 46
+IRrecv irrecv(46);
+
 long prevIRCode = 0;
 
 
 Light light;
+HardwareSerial* serials[4];
 // Xmas xmas;
 
 
@@ -21,12 +24,13 @@ void (*reset) (void) = 0;
 
 
 void setup() {
-    Serial.begin(9600);
+    serials[0] = &Serial;
+    serials[1] = &Serial3;
+
+    Serial.begin(115200);
+    Serial3.begin(9600);
     irrecv.enableIRIn();
     pinMode(LED_BUILTIN, OUTPUT);
-    
-    pinMode(2, OUTPUT);
-    digitalWrite(2, HIGH);
     
     if (!rtc.begin()) {
         Serial.println("Couldn't find RTC");
@@ -61,11 +65,6 @@ void handleIrCode(long code) {
         case 0xFF6897:  light.Switch(2);     break;  
         case 0xFFE817:  light.Switch(3);     break;  
         
-        // case 0xFFA05F:  xmas.Enable();          break;  // UP
-        // case 0xFF20DF:  xmas.Disable();
-        //                 light.UpdateOutput();   break;  // DOWN
-
-
         default:
 
             if (code == 0xFFFFFFFF)
@@ -73,14 +72,16 @@ void handleIrCode(long code) {
             prevIRCode = code;
     
             switch (code) {
-                case 0xFFB04F:  light.Darken(0);   break;
+                case 0xFFB04F:  light.Darken(0);     break;
                 case 0xFF906F:  light.Brighten(0);   break;
-                case 0xFF30CF:  light.Darken(1);   break;
+                case 0xFF30CF:  light.Darken(1);     break;
                 case 0xFF10EF:  light.Brighten(1);   break;
-                case 0xFF708F:  light.Darken(2);   break;
+                case 0xFF708F:  light.Darken(2);     break;
                 case 0xFF50AF:  light.Brighten(2);   break;
-                case 0xFFF00F:  light.Darken(3);   break;
+                case 0xFFF00F:  light.Darken(3);     break;
                 case 0xFFD02F:  light.Brighten(3);   break;
+                case 0xFFA05F:  light.Brighten(4);   break;  // UP
+                case 0xFF20DF:  light.Darken(4);     break;  // DOWN
 
                 case 0xFF609F:  light.Power(false);     break;
                 case 0xFFE01F:  light.Power(true);      break;
@@ -97,37 +98,50 @@ void handleIrCode(long code) {
 
 
 
-void serialEvent() {
+void serialEvent() { 
+    handleSerialEvent(0);
+}
+
+void serialEvent3 () { 
+    handleSerialEvent(1);
+}
+
+void handleSerialEvent(int s) {
     String command = "";
 
-    while (Serial.available()) {
-        char c = Serial.read();
+    while (serials[s]->available()) {
+        char c = serials[s]->read();
         if (c == ';') 
             break;
         command += c;
 
-        if (!Serial.available())
-            delay(20);
+        if (!serials[s]->available())
+            delay(5);
     }
 
     command.trim();
 
     if (command.length() > 0) {
         command.toLowerCase();
-        handleCommand(command);
+        serials[s]->println(&handleCommand(command)[0]);
         command.remove(0);
     }
 }
 
-void handleCommand(String input) {
-    String args[8];
-    int argIndex = 0;
+String handleCommand(String input) {
+    const byte ARGS_LEN = 8;
+    String args[ARGS_LEN];
+    byte argIndex = 0;
     
     while (input.length() > 0) {
+        if (argIndex > ARGS_LEN) {
+            return "Too many arguments given";
+        }
         int spaceIndex = input.indexOf(' ');
         if (spaceIndex > -1) {
             args[argIndex] = input.substring(0, spaceIndex);
             input.remove(0, spaceIndex + 1);
+            input.trim();
             argIndex++;
         }
         else {
@@ -138,7 +152,7 @@ void handleCommand(String input) {
 
     if (args[0] == "time") {
         if (args[1].length() == 0)
-            Serial.print((timeToISO(rtc.now()) + "\n").c_str());
+            return (timeToISO(rtc.now()) + "\n").c_str();
         else if (timeFromISO(args[1]).unixtime() != 0)
             rtc.adjust(timeFromISO(args[1]));
     }
@@ -162,12 +176,21 @@ void handleCommand(String input) {
                 light.SetColor(i, args[i + 1].toFloat());
             }
         }
-        else if (args[2].length() > 0)
-            light.SetColor(args[1].toInt(), args[2].toFloat());
+        else if (args[2].length() > 0) {
+            if (args[2] == "+")
+                light.Brighten(args[1].toInt());
+            else if (args[2] == "-")
+                light.Darken(args[1].toInt());
+            else if (args[2] == "switch")
+                light.Switch(args[1].toInt());
+            else
+                light.SetColor(args[1].toInt(), args[2].toFloat());
+            return light.GetColor();
+        }
         else if (args[1].length() > 0)
-            Serial.println(light.GetColor(args[1].toInt()));
+            return String(light.GetColor(args[1].toInt()));
         else 
-            Serial.println(light.GetColor());
+            return light.GetColor();
     }
 
     else if (args[0] == "alpha") {
@@ -179,28 +202,42 @@ void handleCommand(String input) {
             light.UpdateOutput();
         }
         else
-            Serial.println(light.alpha);
+            return String(light.alpha);
     }
 
     else if (args[0] == "reset") {
-        Serial.println("=== Software Reset ===");
-        delay(20);
         reset();
     }
 
-    else {
-        Serial.println(String("Unrecognized command: '") + args[0] + "'");
+    else if (args[0] == "?" || args[0] == "help") {
+        String man = "";
+
+        man += "string time();\n";
+        man += "void time(string isoTime);\n\n";
+
+        man += "void ir(string hexCode);\n\n";
+
+        man += "void on();\n";
+        man += "void off();\n\n";
+
+        man += "string color();\n";
+        man += "float color(int led);\n";
+        man += "string color(int led, float value);\n";
+        man += "string color(float r, float g, float b, float w);\n\n";
+
+        man += "float alpha();\n";
+        man += "void alpha(float value);\n\n";
+
+        man += "void reset();\n\n";
+
+        return man;
     }
 
-    // else if (command.startsWith("+")) {
-    //     light.Brighten(command.substring(1).toInt());
-    // }
-    // else if (command.startsWith("-")) {
-    //     light.Darken(command.substring(1).toInt());
-    // }
-    // else if (command.startsWith("*")) {
-    //     light.Switch(command.substring(1).toInt());
-    // }
+    else {
+        return String("Unrecognized command: '") + args[0] + "'";
+    }
+
+    return "OK";
 }
 
 String timeToISO(DateTime time) {

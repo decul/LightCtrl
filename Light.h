@@ -1,21 +1,25 @@
 #pragma once
 #include <Arduino.h>
 
+#define COLOR_COUNT 5
+
 class Light {
 private:
-    const byte ledPins[4] = { 5, 6, 9, 10 };
 
-    byte ledMin[4] = { 25, 23, 24, 25 };
-    byte ledMax[4] = { 187, 176, 198, 225 };
+    byte ledMin[COLOR_COUNT] = { 25, 23, 24, 25, 50 };
+    byte ledMax[COLOR_COUNT] = { 187, 176, 198, 225, 255 };
 
-    //const int ledWeights[4] = { 255, 108, 56, 56 };
+    //const int ledWeights[COLOR_COUNT] = { 255, 108, 56, 56 };
 
-    float lightColor[4] = { 1.0, 0.40, 0.0, 1.0 };
+    float lightColor[COLOR_COUNT] = { 0.0, 0.0, 0.0, 0.0, 0.5 };
 
     bool powerOn = true;
 
 public:
-    float alpha = 0.6;
+    const byte ledPins[COLOR_COUNT] = { 2, 6, 10, 11, 9 };
+    const byte binaryPin = 8;
+
+    float alpha = 1.0;
     
     Light();
     
@@ -31,7 +35,7 @@ public:
     void SetColor(int index, float value);
     void SetColor(float* color);
 
-    byte GetColor(int index);
+    float GetColor(int index);
     String GetColor();
 
     void Power(bool on);

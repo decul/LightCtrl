@@ -3,27 +3,35 @@
 #include <math.h>
 
 Light::Light() {
-	for (int l = 0; l < 4; l++)
+	for (int l = 0; l < COLOR_COUNT; l++) 
         pinMode(ledPins[l], OUTPUT);
+    pinMode(binaryPin, OUTPUT);
     UpdateOutput();
 }
 
 void Light::UpdateOutput() {
-    for (int l = 0; l < 4; l++) {
-        if (!powerOn || lightColor[l] == 0.0)
+    for (int l = 0; l < COLOR_COUNT; l++) {
+        if (!powerOn || lightColor[l] == 0.0) {
             digitalWrite(ledPins[l], LOW);
-        else if (lightColor[l] == 1.0)
+        }
+        else if (lightColor[l] == 1.0) {
             digitalWrite(ledPins[l], HIGH);
+        }
         else {
             float c = lightColor[l];
             float colorWithAlpha = alpha * c * c + (1.0 - alpha) * c;
             int ledValue = colorWithAlpha * (ledMax[l] - ledMin[l]) + ledMin[l];
             analogWrite(ledPins[l], ledValue);
         }
-        //Serial.print("%.02d", lightColor[l]);
-        //Serial.print(" ");
+
+        if (powerOn && lightColor[4] == 1.0) {
+            digitalWrite(binaryPin, HIGH);
+        }
+        else {
+            digitalWrite(binaryPin, LOW);
+        }
     }
-    //Serial.println();
+    //Serial.println(String("\t\t") + GetColor());
 }
 
 
@@ -67,18 +75,18 @@ void Light::SetColor(int index, float value) {
 }
 
 void Light::SetColor(float* rgbw) {
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < COLOR_COUNT; i++)
         lightColor[i] = rgbw[i];
     UpdateOutput();
 }
 
-byte Light::GetColor(int index) {
+float Light::GetColor(int index) {
     return lightColor[index];
 }
 
 String Light::GetColor() {
     String str = "";
-    for (int l = 0; l < 4; l++) {
+    for (int l = 0; l < COLOR_COUNT; l++) {
         str += lightColor[l];
         str += " ";
     }
