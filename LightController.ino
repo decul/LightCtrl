@@ -52,6 +52,8 @@ void loop() {
         handleIrCode(irResult.value);
         irrecv.resume(); // Receive the next value
     }
+
+    light.HandleStrobe();
 }
 
 
@@ -129,87 +131,87 @@ void handleSerialEvent(int s) {
 }
 
 String handleCommand(String input) {
-    const byte ARGS_LEN = 8;
-    String args[ARGS_LEN];
-    byte argIndex = 0;
+    const byte MAX_ARGS_LEN = 8;
+    String args[MAX_ARGS_LEN];
+    byte argsNo = 0;
+
+    String command = getWord(input);
     
     while (input.length() > 0) {
-        if (argIndex > ARGS_LEN) {
+        if (++argsNo >= MAX_ARGS_LEN) {
             return "Too many arguments given";
         }
-        int spaceIndex = input.indexOf(' ');
-        if (spaceIndex > -1) {
-            args[argIndex] = input.substring(0, spaceIndex);
-            input.remove(0, spaceIndex + 1);
-            input.trim();
-            argIndex++;
-        }
-        else {
-            args[argIndex] = input;
-            break;
-        }
+        args[argsNo - 1] = getWord(input);
     }
 
-    if (args[0] == "time") {
-        if (args[1].length() == 0)
+    if (command == "time") {
+        if (argsNo == 0)
             return (timeToISO(rtc.now()) + "\n").c_str();
-        else if (timeFromISO(args[1]).unixtime() != 0)
-            rtc.adjust(timeFromISO(args[1]));
+        else if (timeFromISO(args[0]).unixtime() != 0)
+            rtc.adjust(timeFromISO(args[0]));
     }
 
-    else if (args[0] == "ir") {
+    else if (command == "ir") {
         char *p;
-        handleIrCode(strtoul(args[1].c_str(), &p, 16));
+        handleIrCode(strtoul(args[0].c_str(), &p, 16));
     }
 
-    else if (args[0] == "on") {
+    else if (command == "on") {
         light.Power(true);
     }
 
-    else if (args[0] == "off") {
+    else if (command == "off") {
         light.Power(false);
     }
 
-    else if (args[0] == "color") {
-        if (args[4].length() > 0) {
-            for (int i = 0; i < 4; i++) {
-                light.SetColor(i, args[i + 1].toFloat());
+    else if (command == "color") {
+        if (argsNo == COLOR_COUNT) {
+            for (int i = 0; i < COLOR_COUNT; i++) {
+                light.SetColor(i, args[i].toFloat());
             }
         }
-        else if (args[2].length() > 0) {
-            if (args[2] == "+")
-                light.Brighten(args[1].toInt());
-            else if (args[2] == "-")
-                light.Darken(args[1].toInt());
-            else if (args[2] == "switch")
-                light.Switch(args[1].toInt());
+        else if (argsNo == 2) {
+            if (args[1] == "+")
+                light.Brighten(args[0].toInt());
+            else if (args[1] == "-")
+                light.Darken(args[0].toInt());
+            else if (args[1] == "switch")
+                light.Switch(args[0].toInt());
             else
-                light.SetColor(args[1].toInt(), args[2].toFloat());
+                light.SetColor(args[0].toInt(), args[1].toFloat());
             return light.GetColor();
         }
-        else if (args[1].length() > 0)
-            return String(light.GetColor(args[1].toInt()));
+        else if (argsNo == 1)
+            return String(light.GetColor(args[0].toInt()));
+        else if (argsNo == 0)
+            return light.GetColor();
         else 
-            return light.GetColor();
+            return "Wrong number of arguments";
     }
 
-    else if (args[0] == "alpha") {
-        if (args[1].length() > 0) {
-            float alpha = args[1].toFloat();
-            if (alpha > 1.0)
-                alpha = (alpha - 2.0) / 100.0;
-            light.alpha = alpha;
-            light.UpdateOutput();
+    else if (command == "output") {
+        if (argsNo == 0) {
+            return light.GetOutput();
         }
-        else
-            return String(light.alpha);
+        else if (argsNo == 2) {
+            light.SetOutput(args[0].toInt(), args[1].toInt());
+        }
     }
 
-    else if (args[0] == "reset") {
+    else if (command == "strobe") {
+        if (argsNo == 0)
+            light.StopStrobe();
+        else if (argsNo == 2)
+            light.StartStrobe(args[0].toFloat(), args[1].toFloat());
+        else 
+            return "Wrong number of arguments";
+    }
+
+    else if (command == "reset") {
         reset();
     }
 
-    else if (args[0] == "?" || args[0] == "help") {
+    else if (command == "?" || command == "help") {
         String man = "";
 
         man += "string time();\n";
@@ -223,7 +225,8 @@ String handleCommand(String input) {
         man += "string color();\n";
         man += "float color(int led);\n";
         man += "string color(int led, float value);\n";
-        man += "string color(float r, float g, float b, float w);\n\n";
+        man += "string color(int led, string arg);\n";
+        man += "string color(float col[5]);\n\n";
 
         man += "float alpha();\n";
         man += "void alpha(float value);\n\n";
@@ -234,7 +237,7 @@ String handleCommand(String input) {
     }
 
     else {
-        return String("Unrecognized command: '") + args[0] + "'";
+        return String("Unrecognized command: '") + command + "'";
     }
 
     return "OK";
@@ -258,4 +261,23 @@ DateTime timeFromISO(String iso) {
         iso.substring(14, 16).toInt(),
         (iso.length() == 19) ? iso.substring(17, 19).toInt() : 0
     );
+}
+
+String getWord(String &input) {
+    String result;
+    int spaceIndex = input.indexOf(' ');
+
+    if (spaceIndex > -1) {
+        result = input.substring(0, spaceIndex);
+        input.remove(0, spaceIndex + 1);
+    }
+    else {
+        result = input.substring(0, input.length());
+        input.remove(0, input.length());
+    }
+
+    input.trim();
+    result.trim();
+
+    return result;
 }

@@ -1,26 +1,27 @@
 #pragma once
 #include <Arduino.h>
+#include "LedCharacteristics.h"
 
 #define COLOR_COUNT 5
 
 class Light {
 private:
+    LedCharacteristics characteristics;
 
-    byte ledMin[COLOR_COUNT] = { 25, 23, 24, 25, 50 };
-    byte ledMax[COLOR_COUNT] = { 187, 176, 198, 225, 255 };
-
-    //const int ledWeights[COLOR_COUNT] = { 255, 108, 56, 56 };
+    const byte ledPins[COLOR_COUNT] = { 2, 6, 10, 11, 9 };
+    const byte binaryPin = 8;
 
     float lightColor[COLOR_COUNT] = { 0.0, 0.0, 0.0, 0.0, 0.5 };
 
     bool powerOn = true;
 
-public:
-    const byte ledPins[COLOR_COUNT] = { 2, 6, 10, 11, 9 };
-    const byte binaryPin = 8;
+    bool strobeEnabled = false;
+    long nextStrobeTime = 0;
+    long prevStrobeTime = 0;
+    int strobeDuration = 1000;
+    int strobePeriod = 1000000;
 
-    float alpha = 1.0;
-    
+public:
     Light();
     
     void UpdateOutput();
@@ -38,7 +39,13 @@ public:
     float GetColor(int index);
     String GetColor();
 
+    void SetOutput(int index, byte value);
+    String GetOutput();
+    byte GetOutput(int l);
+
     void Power(bool on);
 
-    void SetAlpha(float alpha);
+    void StartStrobe(float duration, float period);
+    void HandleStrobe();
+    void StopStrobe();
 };

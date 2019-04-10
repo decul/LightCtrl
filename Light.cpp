@@ -11,26 +11,10 @@ Light::Light() {
 
 void Light::UpdateOutput() {
     for (int l = 0; l < COLOR_COUNT; l++) {
-        if (!powerOn || lightColor[l] == 0.0) {
-            digitalWrite(ledPins[l], LOW);
-        }
-        else if (lightColor[l] == 1.0) {
-            digitalWrite(ledPins[l], HIGH);
-        }
-        else {
-            float c = lightColor[l];
-            float colorWithAlpha = alpha * c * c + (1.0 - alpha) * c;
-            int ledValue = colorWithAlpha * (ledMax[l] - ledMin[l]) + ledMin[l];
-            analogWrite(ledPins[l], ledValue);
-        }
-
-        if (powerOn && lightColor[4] == 1.0) {
-            digitalWrite(binaryPin, HIGH);
-        }
-        else {
-            digitalWrite(binaryPin, LOW);
-        }
+        analogWrite(ledPins[l], GetOutput(l));
     }
+    digitalWrite(binaryPin, (powerOn && lightColor[4] == 1.0));
+
     //Serial.println(String("\t\t") + GetColor());
 }
 
@@ -99,3 +83,58 @@ void Light::Power(bool on) {
     UpdateOutput();
 }
 
+void Light::SetOutput(int index, byte value) {
+    lightColor[index] = characteristics.Out2Perc(value, index);
+    UpdateOutput();
+}
+
+byte Light::GetOutput(int l) {
+    if (!powerOn || lightColor[l] == 0.0) 
+        return 0;
+    else if (lightColor[l] == 1.0) 
+        return 255;
+    else 
+        return characteristics.Perc2Out(lightColor[l], l);
+}
+
+String Light::GetOutput() {
+    String str = "";
+    for (int l = 0; l < COLOR_COUNT; l++) {
+        str += GetOutput(l);
+        str += " ";
+    }
+    return str;
+}
+
+
+void Light::StartStrobe(float width, float frequency) {
+    Power(false);
+    strobeEnabled = true;
+    strobePeriod = 1000000.0 / frequency;
+    strobeDuration = width * strobePeriod;
+    nextStrobeTime = micros() + strobePeriod;
+}
+
+void Light::HandleStrobe() {
+    if (strobeEnabled) {
+        if (powerOn)
+            Power(false);
+
+        long currentTime = micros();
+        if (currentTime < prevStrobeTime)
+            nextStrobeTime = 0;
+        prevStrobeTime = currentTime;
+
+        if (currentTime >= nextStrobeTime) {
+            digitalWrite(binaryPin, HIGH);
+            delayMicroseconds(strobeDuration);
+            digitalWrite(binaryPin, LOW);
+            nextStrobeTime += strobePeriod;
+        }
+    }
+}
+
+void Light::StopStrobe() {
+    Power(true);
+    strobeEnabled = false;
+}

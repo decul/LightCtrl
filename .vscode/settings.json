@@ -20,6 +20,7 @@
         "initializer_list": "cpp",
         "vector": "cpp",
         "xhash": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "cstddef": "cpp"
     }
 }
