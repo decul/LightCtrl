@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include "LedCharacteristics.h"
+#include "Timer.h"
 
 #define COLOR_COUNT 5
 
@@ -20,6 +21,9 @@ private:
     long prevStrobeTime = 0;
     int strobeDuration = 1000;
     int strobePeriod = 1000000;
+
+    //MicrosTimer strobePeriodTimer;
+    //MicrosTimer strobeDurationTimer;
 
 public:
     Light();
@@ -44,8 +48,9 @@ public:
     byte GetOutput(int l);
 
     void Power(bool on);
+    void SwitchPower();
 
-    void StartStrobe(float duration, float period);
+    void StartStrobe(float width, float frequency);
     void HandleStrobe();
     void StopStrobe();
 };

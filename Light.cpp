@@ -24,6 +24,7 @@ void Light::Brighten() {
 }
 
 void Light::Brighten(int index) {
+    Power(true);
     lightColor[index] += 0.04;
     if (lightColor[index] > 1.0)
         lightColor[index] = 1.0;
@@ -35,6 +36,7 @@ void Light::Darken() {
 }
 
 void Light::Darken(int index) {
+    Power(true);
     lightColor[index] -= 0.04;
     if (lightColor[index] < 0.0)
         lightColor[index] = 0.0;
@@ -43,6 +45,7 @@ void Light::Darken(int index) {
 
 
 void Light::Switch(int index) {
+    Power(true);
     if (lightColor[index] > 0.0)
         lightColor[index] = 0.0;
     else
@@ -79,7 +82,14 @@ String Light::GetColor() {
 
 
 void Light::Power(bool on) {
-    powerOn = on;
+    if (powerOn != on) {
+        powerOn = on;
+        UpdateOutput();
+    }
+}
+    
+void Light::SwitchPower() {
+    powerOn = !powerOn;
     UpdateOutput();
 }
 
@@ -117,8 +127,7 @@ void Light::StartStrobe(float width, float frequency) {
 
 void Light::HandleStrobe() {
     if (strobeEnabled) {
-        if (powerOn)
-            Power(false);
+        Power(false);
 
         long currentTime = micros();
         if (currentTime < prevStrobeTime)
@@ -126,7 +135,9 @@ void Light::HandleStrobe() {
         prevStrobeTime = currentTime;
 
         if (currentTime >= nextStrobeTime) {
+            //strobeDurationTimer.Start(strobeDuration);
             digitalWrite(binaryPin, HIGH);
+            //strobeDurationTimer.WaitForExpiration();
             delayMicroseconds(strobeDuration);
             digitalWrite(binaryPin, LOW);
             nextStrobeTime += strobePeriod;

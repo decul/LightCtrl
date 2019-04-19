@@ -1,6 +1,7 @@
 #include <IRremote.h>
 #include "Xmas.h"
 #include "Light.h"
+#include "Button.h"
 #include <Arduino.h>
 #include <RTClib.h>
 //#include <OneWire.h>
@@ -14,6 +15,7 @@ long prevIRCode = 0;
 
 
 Light light;
+Button button(A15);
 HardwareSerial* serials[4];
 // Xmas xmas;
 
@@ -54,6 +56,20 @@ void loop() {
     }
 
     light.HandleStrobe();
+
+    switch (button.GetAction()) {
+        case Button::SWITCH_POWER:
+            light.SwitchPower();
+            break;
+
+        case Button::BRIGHTEN:
+            light.Brighten(4);
+            break;
+
+        case Button::DARKEN:
+            light.Darken(4);
+            break;
+    }
 }
 
 
