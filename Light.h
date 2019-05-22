@@ -9,7 +9,6 @@ class Light {
 private:
     LedCharacteristics characteristics;
 
-    const byte ledPins[COLOR_COUNT] = { 2, 6, 10, 11, 9 };
     const byte binaryPin = 8;
 
     float lightColor[COLOR_COUNT] = { 0.0, 0.0, 0.0, 0.0, 0.5 };
@@ -26,6 +25,8 @@ private:
     //MicrosTimer strobeDurationTimer;
 
 public:
+    const byte ledPins[COLOR_COUNT] = { 2, 6, 10, 11, 9 };
+    
     Light();
     
     void UpdateOutput();

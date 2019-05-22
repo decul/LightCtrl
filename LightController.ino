@@ -214,6 +214,12 @@ String handleCommand(String input) {
         }
     }
 
+    else if (command == "quick") {
+        analogWrite(light.ledPins[args[0].toInt()], args[1].toInt());
+        delay(5000);
+        digitalWrite(light.ledPins[args[0].toInt()], LOW);
+    }
+
     else if (command == "strobe") {
         if (argsNo == 0)
             light.StopStrobe();
