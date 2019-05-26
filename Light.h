@@ -2,16 +2,20 @@
 #include <Arduino.h>
 #include "LedCharacteristics.h"
 #include "Timer.h"
+#include "RTClib.h"
 
 #define COLOR_COUNT 5
 
 class Light {
 private:
+    RTC_DS1307 rtc;
+
     LedCharacteristics characteristics;
 
     const byte binaryPin = 8;
 
-    float lightColor[COLOR_COUNT] = { 0.0, 0.0, 0.0, 0.0, 0.5 };
+    float lightColor[COLOR_COUNT];
+    float defaultColor[COLOR_COUNT] = { 1.0, 0.76, 0.0, 0.0, 0.5 };
 
     bool powerOn = true;
 
@@ -20,6 +24,13 @@ private:
     long prevStrobeTime = 0;
     int strobeDuration = 1000;
     int strobePeriod = 1000000;
+
+    DateTime dimmerResetTime;
+    DateTime dimmerStartTime;
+    DateTime dimmerEndTime;
+    bool dimmerDisabled = false;
+    bool dimmerFinished = false;
+    float dimmerInitColor[COLOR_COUNT];
 
     //MicrosTimer strobePeriodTimer;
     //MicrosTimer strobeDurationTimer;
@@ -54,4 +65,11 @@ public:
     void StartStrobe(float width, float frequency);
     void HandleStrobe();
     void StopStrobe();
+
+    void HandleAutoDimming();
+    void ResetDimmer();
+    void EnableDimmer();
+    void DisableDimmer();
+    void UpdateDimmer();
+
 };

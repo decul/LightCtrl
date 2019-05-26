@@ -6,7 +6,6 @@ Light::Light() {
 	for (int l = 0; l < COLOR_COUNT; l++) 
         pinMode(ledPins[l], OUTPUT);
     pinMode(binaryPin, OUTPUT);
-    UpdateOutput();
 }
 
 void Light::UpdateOutput() {
@@ -29,6 +28,7 @@ void Light::Brighten(int index) {
     if (lightColor[index] > 1.0)
         lightColor[index] = 1.0;
     UpdateOutput();
+    UpdateDimmer();
 }
 
 void Light::Darken() {
@@ -41,6 +41,7 @@ void Light::Darken(int index) {
     if (lightColor[index] < 0.0)
         lightColor[index] = 0.0;
     UpdateOutput();
+    UpdateDimmer();
 }
 
 
@@ -51,6 +52,7 @@ void Light::Switch(int index) {
     else
         lightColor[index] = 1.0;
     UpdateOutput();
+    UpdateDimmer();
 }
 
 
@@ -59,12 +61,14 @@ void Light::SetColor(int index, float value) {
         value = (value - 2.0) / 100.0;
     lightColor[index] = value;
     UpdateOutput();
+    UpdateDimmer();
 }
 
 void Light::SetColor(float* rgbw) {
     for (int i = 0; i < COLOR_COUNT; i++)
         lightColor[i] = rgbw[i];
     UpdateOutput();
+    UpdateDimmer();
 }
 
 float Light::GetColor(int index) {
@@ -96,6 +100,7 @@ void Light::SwitchPower() {
 void Light::SetOutput(int index, byte value) {
     lightColor[index] = characteristics.Out2Perc(value, index);
     UpdateOutput();
+    UpdateDimmer();
 }
 
 byte Light::GetOutput(int l) {
@@ -148,4 +153,80 @@ void Light::HandleStrobe() {
 void Light::StopStrobe() {
     Power(true);
     strobeEnabled = false;
+}
+
+#define defDimmerEndHour 23
+#define defDimmerSpan 2
+#define defDimmerResetHour 10
+#define dimmerMinPeriod 30
+
+void Light::HandleAutoDimming() {
+    DateTime now = rtc.now();
+    
+    // Reset dimmer once a day
+    if (now > dimmerResetTime && !powerOn) {
+        ResetDimmer();
+    }
+
+    // Dim light if that's right time
+    if (!dimmerDisabled && !dimmerFinished && now > dimmerStartTime) {
+        TimeSpan dimmerSpan = dimmerEndTime - dimmerStartTime;
+        TimeSpan timeRemaining = dimmerEndTime - now;
+        float percent = max(0.0, (float)timeRemaining.totalseconds() / dimmerSpan.totalseconds());
+
+        for (int i = 2; i < COLOR_COUNT; i++) 
+            lightColor[i] = percent * dimmerInitColor[i];
+        UpdateOutput();
+
+        if (now > dimmerEndTime) 
+            dimmerFinished = true;
+            
+    }
+}
+
+void Light::ResetDimmer() {
+    for (int i = 0; i < COLOR_COUNT; i++) {
+        lightColor[i] = defaultColor[i];
+        dimmerInitColor[i] = defaultColor[i];
+    }
+    UpdateOutput();
+
+    dimmerDisabled = false;
+    dimmerFinished = false;
+    DateTime now = rtc.now();
+
+    dimmerEndTime = DateTime::ClosestDate(now, defDimmerEndHour, 0);
+    dimmerStartTime = dimmerEndTime - TimeSpan(0, defDimmerSpan, 0, 0);
+    dimmerResetTime = DateTime::ClosestDate(now, defDimmerResetHour, 0);
+}
+
+void Light::EnableDimmer() {
+    dimmerDisabled = false;
+    UpdateDimmer();
+}
+
+void Light::DisableDimmer() {
+    dimmerDisabled = true;
+}
+
+void Light::UpdateDimmer() {
+    if (lightColor[2] == 0.0 && lightColor[3] == 0.0 && lightColor[4] == 0.0) {
+        dimmerFinished = true;
+        return;
+    }
+
+    for (int i = 0; i < COLOR_COUNT; i++) 
+        dimmerInitColor[i] = lightColor[i];
+    dimmerFinished = false;
+
+    DateTime now = rtc.now();
+    if (now > dimmerStartTime) {
+        dimmerStartTime = now;
+
+        TimeSpan minPeriod = TimeSpan(0, 0, dimmerMinPeriod, 0);
+
+        if (dimmerEndTime - now < minPeriod) {
+            dimmerEndTime = now + minPeriod;
+        }
+    }
 }

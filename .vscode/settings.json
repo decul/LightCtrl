@@ -21,6 +21,7 @@
         "vector": "cpp",
         "xhash": "cpp",
         "xtree": "cpp",
-        "cstddef": "cpp"
+        "cstddef": "cpp",
+        "xiosbase": "cpp"
     }
 }

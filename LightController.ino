@@ -3,7 +3,7 @@
 #include "Light.h"
 #include "Button.h"
 #include <Arduino.h>
-#include <RTClib.h>
+#include "RTClib.h"
 //#include <OneWire.h>
 
 RTC_DS1307 rtc;
@@ -41,6 +41,8 @@ void setup() {
         Serial.println("RTC is NOT running!");
         rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     }
+    
+    light.ResetDimmer();
 }
 
 
@@ -56,6 +58,7 @@ void loop() {
     }
 
     light.HandleStrobe();
+    light.HandleAutoDimming();
 
     switch (button.GetAction()) {
         case Button::SWITCH_POWER:
@@ -162,9 +165,9 @@ String handleCommand(String input) {
 
     if (command == "time") {
         if (argsNo == 0)
-            return (timeToISO(rtc.now()) + "\n").c_str();
-        else if (timeFromISO(args[0]).unixtime() != 0)
-            rtc.adjust(timeFromISO(args[0]));
+            return (rtc.now().toISO() + "\n").c_str();
+        else if (DateTime::FromISO(args[0]).unixtime() != 0)
+            rtc.adjust(DateTime::FromISO(args[0]));
     }
 
     else if (command == "ir") {
@@ -229,7 +232,20 @@ String handleCommand(String input) {
             return "Wrong number of arguments";
     }
 
+    else if (command == "dimmer") {
+        if (argsNo == 0)
+            return "No arguments given";
+        else if (args[0] == "on")
+            light.EnableDimmer();
+        else if (args[0] == "off")
+            light.DisableDimmer();
+        else 
+            return "Invalid arguments";
+    }
+
     else if (command == "reset") {
+        for (int i = 0; i < 2; i++)
+            serials[i]->println("=== Software Reset ===");
         reset();
     }
 
@@ -247,11 +263,16 @@ String handleCommand(String input) {
         man += "string color();\n";
         man += "float color(int led);\n";
         man += "string color(int led, float value);\n";
-        man += "string color(int led, string arg);\n";
+        man += "string color(int led, [+/-/switch]]);\n";
         man += "string color(float col[5]);\n\n";
 
-        man += "float alpha();\n";
-        man += "void alpha(float value);\n\n";
+        man += "string output();\n";
+        man += "void output(int led, int value);\n\n";
+
+        man += "void strobe(float width, float freq);\n";
+        man += "void strobe();\n\n";
+
+        man += "void dimmer([on/off]);\n\n";
 
         man += "void reset();\n\n";
 
@@ -263,26 +284,6 @@ String handleCommand(String input) {
     }
 
     return "OK";
-}
-
-String timeToISO(DateTime time) {
-    char iso[20];
-    sprintf(iso, "%04d-%02d-%02dT%02d:%02d:%02d", time.year(), time.month(), time.day(), time.hour(), time.minute(), time.second());
-    return iso;
-}
-
-DateTime timeFromISO(String iso) {
-    if (iso[4] != '-' || iso[7] != '-' || iso[10] != 't' || iso[13] != ':')
-        return DateTime(0);
-    
-    return DateTime(
-        iso.substring(0, 4).toInt(),
-        iso.substring(5, 7).toInt(),
-        iso.substring(8, 10).toInt(),
-        iso.substring(11, 131).toInt(),
-        iso.substring(14, 16).toInt(),
-        (iso.length() == 19) ? iso.substring(17, 19).toInt() : 0
-    );
 }
 
 String getWord(String &input) {
