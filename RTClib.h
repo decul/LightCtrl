@@ -47,6 +47,35 @@ protected:
 };
 
 
+struct Time {
+    byte h, m, s;
+
+    Time(byte hour = 0, byte minute = 0, byte second = 0) {
+        h = hour;
+        m = minute;
+        s = second;
+    }
+
+    static Time FromISO(String iso) {
+        if (iso[2] != ':')
+            return Time();
+
+        return Time(
+            iso.substring(0, 2).toInt(),
+            iso.substring(3, 5).toInt(),
+            (iso.length() == 8) ? iso.substring(6, 8).toInt() : 0
+        );
+    }
+
+    String toISO() {
+        char iso[9];
+        sprintf(iso, "%02d:%02d:%02d", h, m, s);
+        return iso;
+    }
+
+    inline bool operator!=(const Time& right) { return h != right.h || m != right.m || s != right.s; }
+};
+
 // Simple general-purpose date/time class (no TZ / DST / leap second handling!)
 class DateTime {
 public:
@@ -96,11 +125,11 @@ public:
         );
     }
 
-    static DateTime ClosestDate(DateTime now, uint8_t hour, uint8_t min, uint8_t sec =0) {
+    static DateTime ClosestDate(DateTime now, Time time) {
         DateTime date(now);
-        date.hh = hour;
-        date.mm = min;
-        date.ss = sec;
+        date.hh = time.h;
+        date.mm = time.m;
+        date.ss = time.s;
 
         if (date < now)
             date = date + TimeSpan(1, 0, 0, 0);

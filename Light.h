@@ -3,27 +3,26 @@
 #include "LedCharacteristics.h"
 #include "Timer.h"
 #include "RTClib.h"
+#include "MyEEPROM.h"
 
 #define COLOR_COUNT 5
 
 class Light {
 private:
     RTC_DS1307 rtc;
+    MyEEPROM memory;
 
     LedCharacteristics characteristics;
 
     const byte binaryPin = 8;
 
     float lightColor[COLOR_COUNT];
-    float defaultColor[COLOR_COUNT] = { 1.0, 0.76, 0.0, 0.0, 0.5 };
 
     bool powerOn = true;
 
     bool strobeEnabled = false;
-    long nextStrobeTime = 0;
-    long prevStrobeTime = 0;
-    int strobeDuration = 1000;
-    int strobePeriod = 1000000;
+    MicrosTimer strobePeriodTimer;
+    MicrosTimer strobeDurationTimer;
 
     DateTime dimmerResetTime;
     DateTime dimmerStartTime;
@@ -31,9 +30,6 @@ private:
     bool dimmerDisabled = false;
     bool dimmerFinished = false;
     float dimmerInitColor[COLOR_COUNT];
-
-    //MicrosTimer strobePeriodTimer;
-    //MicrosTimer strobeDurationTimer;
 
 public:
     const byte ledPins[COLOR_COUNT] = { 2, 6, 10, 11, 9 };
@@ -71,5 +67,7 @@ public:
     void EnableDimmer();
     void DisableDimmer();
     void UpdateDimmer();
+
+    void SetColorAsDefault();
 
 };

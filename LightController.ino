@@ -4,9 +4,11 @@
 #include "Button.h"
 #include <Arduino.h>
 #include "RTClib.h"
+#include "MyEEPROM.h"
 //#include <OneWire.h>
 
 RTC_DS1307 rtc;
+MyEEPROM memory;
 
 // Uncomment #define IR_USE_TIMER5 in ...\IRremote\boarddefs.h to use timer from pin 46
 IRrecv irrecv(46);
@@ -165,7 +167,7 @@ String handleCommand(String input) {
 
     if (command == "time") {
         if (argsNo == 0)
-            return (rtc.now().toISO() + "\n").c_str();
+            return rtc.now().toISO();
         else if (DateTime::FromISO(args[0]).unixtime() != 0)
             rtc.adjust(DateTime::FromISO(args[0]));
     }
@@ -239,6 +241,12 @@ String handleCommand(String input) {
             light.EnableDimmer();
         else if (args[0] == "off")
             light.DisableDimmer();
+        else if (args[0] == "setdefcol")
+            light.SetColorAsDefault();
+        else if (args[0] == "gettime")
+            return memory.GetDefaultDimEndTime().toISO();
+        else if (args[0] == "settime" && argsNo == 2)
+            memory.SetDefaultDimEndTime(Time::FromISO(args[1]));
         else 
             return "Invalid arguments";
     }
@@ -246,6 +254,7 @@ String handleCommand(String input) {
     else if (command == "reset") {
         for (int i = 0; i < 2; i++)
             serials[i]->println("=== Software Reset ===");
+        delay(50);
         reset();
     }
 
@@ -263,7 +272,7 @@ String handleCommand(String input) {
         man += "string color();\n";
         man += "float color(int led);\n";
         man += "string color(int led, float value);\n";
-        man += "string color(int led, [+/-/switch]]);\n";
+        man += "string color(int led, [+/-/switch]);\n";
         man += "string color(float col[5]);\n\n";
 
         man += "string output();\n";
@@ -272,7 +281,8 @@ String handleCommand(String input) {
         man += "void strobe(float width, float freq);\n";
         man += "void strobe();\n\n";
 
-        man += "void dimmer([on/off]);\n\n";
+        man += "void dimmer([on/off/setdefcol/gettime]);\n";
+        man += "void dimmer([settime], string iso);\n\n";
 
         man += "void reset();\n\n";
 

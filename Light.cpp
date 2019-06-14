@@ -125,28 +125,20 @@ String Light::GetOutput() {
 void Light::StartStrobe(float width, float frequency) {
     Power(false);
     strobeEnabled = true;
-    strobePeriod = 1000000.0 / frequency;
-    strobeDuration = width * strobePeriod;
-    nextStrobeTime = micros() + strobePeriod;
+    long strobePeriod = 1000000.0 / frequency;
+    strobePeriodTimer.Start(strobePeriod);
+    strobeDurationTimer.period = width * strobePeriod;
 }
 
 void Light::HandleStrobe() {
     if (strobeEnabled) {
         Power(false);
-
-        long currentTime = micros();
-        if (currentTime < prevStrobeTime)
-            nextStrobeTime = 0;
-        prevStrobeTime = currentTime;
-
-        if (currentTime >= nextStrobeTime) {
-            //strobeDurationTimer.Start(strobeDuration);
-            digitalWrite(binaryPin, HIGH);
-            //strobeDurationTimer.WaitForExpiration();
-            delayMicroseconds(strobeDuration);
-            digitalWrite(binaryPin, LOW);
-            nextStrobeTime += strobePeriod;
-        }
+        strobePeriodTimer.WaitForExpiration();
+        strobeDurationTimer.Restart();
+        digitalWrite(binaryPin, HIGH);
+        strobeDurationTimer.WaitForExpiration();
+        digitalWrite(binaryPin, LOW);
+        strobePeriodTimer.Continue();
     }
 }
 
@@ -155,7 +147,6 @@ void Light::StopStrobe() {
     strobeEnabled = false;
 }
 
-#define defDimmerEndHour 23
 #define defDimmerSpan 2
 #define defDimmerResetHour 10
 #define dimmerMinPeriod 30
@@ -186,8 +177,8 @@ void Light::HandleAutoDimming() {
 
 void Light::ResetDimmer() {
     for (int i = 0; i < COLOR_COUNT; i++) {
-        lightColor[i] = defaultColor[i];
-        dimmerInitColor[i] = defaultColor[i];
+        lightColor[i] = memory.GetDefaultColor(i);
+        dimmerInitColor[i] = lightColor[i];
     }
     UpdateOutput();
 
@@ -195,9 +186,9 @@ void Light::ResetDimmer() {
     dimmerFinished = false;
     DateTime now = rtc.now();
 
-    dimmerEndTime = DateTime::ClosestDate(now, defDimmerEndHour, 0);
+    dimmerEndTime = DateTime::ClosestDate(now, memory.GetDefaultDimEndTime());
     dimmerStartTime = dimmerEndTime - TimeSpan(0, defDimmerSpan, 0, 0);
-    dimmerResetTime = DateTime::ClosestDate(now, defDimmerResetHour, 0);
+    dimmerResetTime = DateTime::ClosestDate(now, Time(defDimmerResetHour));
 }
 
 void Light::EnableDimmer() {
@@ -229,4 +220,9 @@ void Light::UpdateDimmer() {
             dimmerEndTime = now + minPeriod;
         }
     }
+}
+
+void Light::SetColorAsDefault() {
+    for (int i = 0; i < COLOR_COUNT; i++) 
+        memory.SetDefaultColor(i, lightColor[i]);
 }
