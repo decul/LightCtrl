@@ -46,7 +46,7 @@ public:
     void Switch(int index);
 
     void SetColor(int index, float value);
-    void SetColor(float* color);
+    void SetColor(float* color, int count = COLOR_COUNT);
 
     float GetColor(int index);
     String GetColor();

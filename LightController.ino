@@ -17,9 +17,9 @@ long prevIRCode = 0;
 
 
 Light light;
-Button button(A15);
+Xmas xmas(&light);
+Button button(A10);
 HardwareSerial* serials[4];
-// Xmas xmas;
 
 
 //declare reset function @ address 0
@@ -50,8 +50,6 @@ void setup() {
 
 
 void loop() {
-    // xmas.Run();
-
     decode_results irResult;
     if (irrecv.decode(&irResult)) {
         //digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
@@ -75,6 +73,8 @@ void loop() {
             light.Darken(4);
             break;
     }
+
+    xmas.Run();
 }
 
 
@@ -251,6 +251,11 @@ String handleCommand(String input) {
             return "Invalid arguments";
     }
 
+    else if (command == "xmas") {
+        if (argsNo == 0)
+            xmas.Switch();
+    }
+
     else if (command == "reset") {
         for (int i = 0; i < 2; i++)
             serials[i]->println("=== Software Reset ===");
@@ -283,6 +288,8 @@ String handleCommand(String input) {
 
         man += "void dimmer([on/off/setdefcol/gettime]);\n";
         man += "void dimmer([settime], string iso);\n\n";
+
+        man += "void xmas();\n\n";
 
         man += "void reset();\n\n";
 

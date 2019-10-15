@@ -1,9 +1,10 @@
 #pragma once 
+#include "limits.h"
 
 class Timer {
 private:
-    long dueTime;
-    long startTime;
+    long dueTime = LONG_MAX;
+    long startTime = -1;
 
     virtual long getTime();
 

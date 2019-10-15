@@ -64,9 +64,8 @@ void Light::SetColor(int index, float value) {
     UpdateDimmer();
 }
 
-void Light::SetColor(float* rgbw) {
-    for (int i = 0; i < COLOR_COUNT; i++)
-        lightColor[i] = rgbw[i];
+void Light::SetColor(float* rgbwy, int count) {
+    memcpy(lightColor, rgbwy, sizeof(float) * count);
     UpdateOutput();
     UpdateDimmer();
 }
