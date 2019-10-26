@@ -18,10 +18,6 @@ void Light::UpdateOutput() {
 }
 
 
-void Light::Brighten() {
-
-}
-
 void Light::Brighten(int index) {
     Power(true);
     lightColor[index] += 0.04;
@@ -29,10 +25,6 @@ void Light::Brighten(int index) {
         lightColor[index] = 1.0;
     UpdateOutput();
     UpdateDimmer();
-}
-
-void Light::Darken() {
-
 }
 
 void Light::Darken(int index) {
@@ -224,4 +216,14 @@ void Light::UpdateDimmer() {
 void Light::SetColorAsDefault() {
     for (int i = 0; i < COLOR_COUNT; i++) 
         memory.SetDefaultColor(i, lightColor[i]);
+}
+
+
+
+void Light::Flash(long us) {
+    MicrosTimer timer;
+    digitalWrite(binaryPin, 1);
+    timer.Start(us);
+    timer.WaitForExpiration();
+    digitalWrite(binaryPin, 0);
 }

@@ -35,9 +35,12 @@ class Button {
 
 public:
     static const byte NO_ACTION = 0;
-    static const byte SWITCH_POWER = 1;
-    static const byte BRIGHTEN = 2;
-    static const byte DARKEN = 3;
+    static const byte CLICK = 1;
+    static const byte HOLD = 2;
+    static const byte CLICK_HOLD = 3;
+    static const byte DOUBLE_CLICK = 4;
+    static const byte DOWN = 11;
+    static const byte UP = 12;
 
     Button(byte arduinoPin) 
         : buttonPin(arduinoPin) {
@@ -53,6 +56,7 @@ public:
                 if (pressed()) {
                     state = 2;
                     timer.Start(chainTime);
+                    return DOWN;
                 }
                 break;
 
@@ -61,22 +65,24 @@ public:
                 if (timer.HasExpired()) {
                     state = 3;
                     timer.AddTime(continuousTime);
-                    return BRIGHTEN;
+                    return HOLD;
                 }
                 else if (released()) {
                     state = 4;
                     timer.Start(chainTime);
+                    return UP;
                 }
                 break;
 
-            // Increasing brightness
+            // Holding
             case 3:
                 if (timer.HasExpired()) {
                     timer.Continue();
-                    return BRIGHTEN;
+                    return HOLD;
                 }
                 else if (released()) {
                     state = 1;
+                    return UP;
                 }
                 break;
 
@@ -84,25 +90,48 @@ public:
             case 4:
                 if (timer.HasExpired()) {
                     state = 1;
-                    return SWITCH_POWER;
+                    return CLICK;
                 }
                 else if (pressed()) {
                     state = 5;
-                    timer.Start(continuousTime);
-                    return DARKEN;
+                    timer.Start(chainTime);
+                    return DOWN;
                 }
                 break;
 
-            // Decreasing brightness
+            // Waiting for 2nd release
             case 5:
                 if (timer.HasExpired()) {
+                    state = 6;
+                    timer.AddTime(continuousTime);
+                    return CLICK_HOLD;
+                }
+                else if (released()) {
+                    state = 7;
+                    timer.Start(chainTime);
+                    return UP;
+                }
+                break;
+
+            // Holding after click
+            case 6: 
+                if (timer.HasExpired()) {
                     timer.Continue();
-                    return DARKEN;
+                    return CLICK_HOLD;
                 }
                 else if (released()) {
                     state = 1;
+                    return UP;
                 }
                 break;
+
+            // Can be used for detecting tripple click. 
+            // Now is used to delay DOUBLE_CLICK, because releasing in 5th state returns UP
+            case 7:
+                state = 1;
+                return DOUBLE_CLICK;
+                break;
+
 
             default:
                 state = 1;

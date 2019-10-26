@@ -18,7 +18,7 @@ private:
 
     float lightColor[COLOR_COUNT];
 
-    bool powerOn = true;
+    bool powerOn = false;
 
     bool strobeEnabled = false;
     MicrosTimer strobePeriodTimer;
@@ -38,9 +38,7 @@ public:
     
     void UpdateOutput();
 
-    void Brighten();
     void Brighten(int index);
-    void Darken();
     void Darken(int index);
 
     void Switch(int index);
@@ -69,5 +67,7 @@ public:
     void UpdateDimmer();
 
     void SetColorAsDefault();
+
+    void Flash(long us);
 
 };

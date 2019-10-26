@@ -61,15 +61,15 @@ void loop() {
     light.HandleAutoDimming();
 
     switch (button.GetAction()) {
-        case Button::SWITCH_POWER:
+        case Button::CLICK:
             light.SwitchPower();
             break;
 
-        case Button::BRIGHTEN:
+        case Button::HOLD:
             light.Brighten(4);
             break;
 
-        case Button::DARKEN:
+        case Button::CLICK_HOLD:
             light.Darken(4);
             break;
     }
@@ -95,19 +95,21 @@ void handleIrCode(long code) {
             prevIRCode = code;
     
             switch (code) {
-                case 0xFFB04F:  light.Darken(0);     break;
-                case 0xFF906F:  light.Brighten(0);   break;
-                case 0xFF30CF:  light.Darken(1);     break;
-                case 0xFF10EF:  light.Brighten(1);   break;
-                case 0xFF708F:  light.Darken(2);     break;
-                case 0xFF50AF:  light.Brighten(2);   break;
-                case 0xFFF00F:  light.Darken(3);     break;
-                case 0xFFD02F:  light.Brighten(3);   break;
-                case 0xFFA05F:  light.Brighten(4);   break;  // UP
-                case 0xFF20DF:  light.Darken(4);     break;  // DOWN
+                case 0xFFB04F:  light.Darken(0);        break;
+                case 0xFF906F:  light.Brighten(0);      break;
+                case 0xFF30CF:  light.Darken(1);        break;
+                case 0xFF10EF:  light.Brighten(1);      break;
+                case 0xFF708F:  light.Darken(2);        break;
+                case 0xFF50AF:  light.Brighten(2);      break;
+                case 0xFFF00F:  light.Darken(3);        break;
+                case 0xFFD02F:  light.Brighten(3);      break;
+                case 0xFFA05F:  light.Brighten(4);      break;  // UP
+                case 0xFF20DF:  light.Darken(4);        break;  // DOWN
 
                 case 0xFF609F:  light.Power(false);     break;
                 case 0xFFE01F:  light.Power(true);      break;
+
+                case 0xFFC837:  light.Flash(100);      break;
             }
 
             break;
@@ -251,6 +253,13 @@ String handleCommand(String input) {
             return "Invalid arguments";
     }
 
+    else if (command == "flash") {
+        if (argsNo == 0)
+            return "No arguments given";
+        else 
+            light.Flash(args[0].toInt());
+    }
+
     else if (command == "xmas") {
         if (argsNo == 0)
             xmas.Switch();
@@ -288,6 +297,8 @@ String handleCommand(String input) {
 
         man += "void dimmer([on/off/setdefcol/gettime]);\n";
         man += "void dimmer([settime], string iso);\n\n";
+
+        man += "void flash(int micros);\n\n";
 
         man += "void xmas();\n\n";
 
