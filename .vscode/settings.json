@@ -23,6 +23,7 @@
         "xtree": "cpp",
         "cstddef": "cpp",
         "xiosbase": "cpp",
-        "iosfwd": "cpp"
+        "iosfwd": "cpp",
+        "*.idl": "cpp"
     }
 }

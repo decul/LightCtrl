@@ -30,8 +30,10 @@ void (*reset) (void) = 0;
 void setup() {
     serials[0] = &Serial;
     serials[1] = &Serial3;
+    serials[2] = &Serial1;
 
     Serial.begin(115200);
+    Serial1.begin(115200);
     Serial3.begin(9600);
     irrecv.enableIRIn();
     pinMode(LED_BUILTIN, OUTPUT);
@@ -127,6 +129,10 @@ void serialEvent() {
     handleSerialEvent(0);
 }
 
+void serialEvent1 () { 
+    handleSerialEvent(2);
+}
+
 void serialEvent3 () { 
     handleSerialEvent(1);
 }
@@ -136,7 +142,7 @@ void handleSerialEvent(int s) {
 
     while (serials[s]->available()) {
         char c = serials[s]->read();
-        if (c == ';') 
+        if (c == ';' || c == '\n') 
             break;
         command += c;
 
@@ -158,28 +164,19 @@ String handleCommand(String input) {
     String args[MAX_ARGS_LEN];
     byte argsNo = 0;
 
-    String command = getWord(input);
-    
-    while (input.length() > 0) {
-        if (++argsNo >= MAX_ARGS_LEN) {
-            return "Too many arguments given";
+    String command = GetWord(input);
+
+    if (command != "wifi:") { 
+        while (input.length() > 0) {
+            if (++argsNo >= MAX_ARGS_LEN) {
+                return "Too many arguments given";
+            }
+            args[argsNo - 1] = GetWord(input);
         }
-        args[argsNo - 1] = getWord(input);
     }
 
-    if (command == "time") {
-        if (argsNo == 0)
-            return rtc.now().toISO();
-        else if (DateTime::FromISO(args[0]).unixtime() != 0)
-            rtc.adjust(DateTime::FromISO(args[0]));
-    }
 
-    else if (command == "ir") {
-        char *p;
-        handleIrCode(strtoul(args[0].c_str(), &p, 16));
-    }
-
-    else if (command == "on") {
+    if (command == "on") {
         light.Power(true);
     }
 
@@ -212,28 +209,13 @@ String handleCommand(String input) {
             return "Wrong number of arguments";
     }
 
-    else if (command == "output") {
-        if (argsNo == 0) {
-            return light.GetOutput();
-        }
-        else if (argsNo == 2) {
-            light.SetOutput(args[0].toInt(), args[1].toInt());
-        }
-    }
-
-    else if (command == "quick") {
-        analogWrite(light.ledPins[args[0].toInt()], args[1].toInt());
-        delay(5000);
-        digitalWrite(light.ledPins[args[0].toInt()], LOW);
-    }
-
-    else if (command == "strobe") {
+    else if (command == "wifi") {
         if (argsNo == 0)
-            light.StopStrobe();
-        else if (argsNo == 2)
-            light.StartStrobe(args[0].toFloat(), args[1].toFloat());
-        else 
-            return "Wrong number of arguments";
+            return "No arguments given";
+        String msg = args[0];
+        for (int i = 0; i < argsNo; i++)
+            msg += " " + args[i];
+        Serial1.println(msg);
     }
 
     else if (command == "dimmer") {
@@ -251,6 +233,15 @@ String handleCommand(String input) {
             memory.SetDefaultDimEndTime(Time::FromISO(args[1]));
         else 
             return "Invalid arguments";
+    }
+
+    else if (command == "strobe") {
+        if (argsNo == 0)
+            light.StopStrobe();
+        else if (argsNo == 2)
+            light.StartStrobe(args[0].toFloat(), args[1].toFloat());
+        else 
+            return "Wrong number of arguments";
     }
 
     else if (command == "flash") {
@@ -272,13 +263,40 @@ String handleCommand(String input) {
         reset();
     }
 
+    else if (command == "time") {
+        if (argsNo == 0)
+            return rtc.now().toISO();
+        else if (DateTime::FromISO(args[0]).unixtime() != 0)
+            rtc.adjust(DateTime::FromISO(args[0]));
+    }
+
+    else if (command == "quick") {
+        analogWrite(light.ledPins[args[0].toInt()], args[1].toInt());
+        delay(5000);
+        digitalWrite(light.ledPins[args[0].toInt()], LOW);
+    }
+
+    else if (command == "output") {
+        if (argsNo == 0) {
+            return light.GetOutput();
+        }
+        else if (argsNo == 2) {
+            light.SetOutput(args[0].toInt(), args[1].toInt());
+        }
+    }
+
+    else if (command == "ir") {
+        char *p;
+        handleIrCode(strtoul(args[0].c_str(), &p, 16));
+    }
+
+    else if (command == "wifi:") {
+        for (int i = 0; i < 2; i++)
+            serials[i]->println("WiFi: " + input);
+    }
+
     else if (command == "?" || command == "help") {
         String man = "";
-
-        man += "string time();\n";
-        man += "void time(string isoTime);\n\n";
-
-        man += "void ir(string hexCode);\n\n";
 
         man += "void on();\n";
         man += "void off();\n\n";
@@ -289,20 +307,27 @@ String handleCommand(String input) {
         man += "string color(int led, [+/-/switch]);\n";
         man += "string color(float col[5]);\n\n";
 
-        man += "string output();\n";
-        man += "void output(int led, int value);\n\n";
-
-        man += "void strobe(float width, float freq);\n";
-        man += "void strobe();\n\n";
+        man += "void wifi([help/?]);\n\n";
 
         man += "void dimmer([on/off/setdefcol/gettime]);\n";
         man += "void dimmer([settime], string iso);\n\n";
+
+        man += "void strobe(float width, float freq);\n";
+        man += "void strobe();\n\n";
 
         man += "void flash(int micros);\n\n";
 
         man += "void xmas();\n\n";
 
         man += "void reset();\n\n";
+
+        man += "string time();\n";
+        man += "void time(string isoTime);\n\n";
+
+        man += "string output();\n";
+        man += "void output(int led, int value);\n\n";
+
+        man += "void ir(string hexCode);\n\n";
 
         return man;
     }
@@ -314,7 +339,7 @@ String handleCommand(String input) {
     return "OK";
 }
 
-String getWord(String &input) {
+String GetWord(String &input) {
     String result;
     int spaceIndex = input.indexOf(' ');
 
