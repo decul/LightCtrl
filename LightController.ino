@@ -1,42 +1,32 @@
-#include <IRremote.h>
 #include "Xmas.h"
 #include "Light.h"
 #include "Button.h"
 #include <Arduino.h>
 #include "RTClib.h"
 #include "MyEEPROM.h"
+#include "SerialMsgr.h"
+#include "IrMsgr.h"
 //#include <OneWire.h>
 
 RTC_DS1307 rtc;
 MyEEPROM memory;
 
-// Uncomment #define IR_USE_TIMER5 in ...\IRremote\boarddefs.h to use timer from pin 46
-IRrecv irrecv(46);
-
-long prevIRCode = 0;
-
 
 Light light;
 Xmas xmas(&light);
 Button button(A10);
-HardwareSerial* serials[4];
 
 
 //declare reset function @ address 0
 void (*reset) (void) = 0; 
 
+DateTime startupTime;
+
 
 
 void setup() {
-    serials[0] = &Serial;
-    serials[1] = &Serial3;
-    serials[2] = &Serial1;
-
-    Serial.begin(115200);
-    Serial1.begin(115200);
-    Serial3.begin(9600);
-    irrecv.enableIRIn();
-    pinMode(LED_BUILTIN, OUTPUT);
+    SerialMsgr::Initialize();
+    IrMsgr::Initialize();
     
     if (!rtc.begin()) {
         Serial.println("Couldn't find RTC");
@@ -45,6 +35,7 @@ void setup() {
         Serial.println("RTC is NOT running!");
         rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     }
+    startupTime = rtc.now();
     
     light.ResetDimmer();
 }
@@ -52,12 +43,9 @@ void setup() {
 
 
 void loop() {
-    decode_results irResult;
-    if (irrecv.decode(&irResult)) {
-        //digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-        handleIrCode(irResult.value);
-        irrecv.resume(); // Receive the next value
-    }
+    String irCommand = IrMsgr::GetCommand();
+    if (irCommand != "") 
+        handleCommand(irCommand);
 
     light.HandleStrobe();
     light.HandleAutoDimming();
@@ -81,82 +69,23 @@ void loop() {
 
 
 
-void handleIrCode(long code) {
-    Serial.println(code, HEX);
-
-    switch (code) {
-        case 0xFFA857:  light.Switch(0);     break;
-        case 0xFF28D7:  light.Switch(1);     break;  
-        case 0xFF6897:  light.Switch(2);     break;  
-        case 0xFFE817:  light.Switch(3);     break;  
-        
-        default:
-
-            if (code == 0xFFFFFFFF)
-                code = prevIRCode;
-            prevIRCode = code;
-    
-            switch (code) {
-                case 0xFFB04F:  light.Darken(0);        break;
-                case 0xFF906F:  light.Brighten(0);      break;
-                case 0xFF30CF:  light.Darken(1);        break;
-                case 0xFF10EF:  light.Brighten(1);      break;
-                case 0xFF708F:  light.Darken(2);        break;
-                case 0xFF50AF:  light.Brighten(2);      break;
-                case 0xFFF00F:  light.Darken(3);        break;
-                case 0xFFD02F:  light.Brighten(3);      break;
-                case 0xFFA05F:  light.Brighten(4);      break;  // UP
-                case 0xFF20DF:  light.Darken(4);        break;  // DOWN
-
-                case 0xFF609F:  light.Power(false);     break;
-                case 0xFFE01F:  light.Power(true);      break;
-
-                case 0xFFC837:  light.Flash(100);      break;
-            }
-
-            break;
-    }
-
-    if (code == 0xFFFFFFFF)
-        code = prevIRCode;
-    prevIRCode = code;
-    
-}
-
 
 
 void serialEvent() { 
-    handleSerialEvent(0);
+    handleSerialEvent(PC_SERIAL);
 }
 
 void serialEvent1 () { 
-    handleSerialEvent(2);
+    handleSerialEvent(WIFI_SERIAL);
 }
 
 void serialEvent3 () { 
-    handleSerialEvent(1);
+    handleSerialEvent(BT_SERIAL);
 }
 
 void handleSerialEvent(int s) {
-    String command = "";
-
-    while (serials[s]->available()) {
-        char c = serials[s]->read();
-        if (c == ';' || c == '\n') 
-            break;
-        command += c;
-
-        if (!serials[s]->available())
-            delay(5);
-    }
-
-    command.trim();
-
-    if (command.length() > 0) {
-        command.toLowerCase();
-        serials[s]->println(&handleCommand(command)[0]);
-        command.remove(0);
-    }
+    String command = SerialMsgr::ReadMsg(s);
+    SerialMsgr::SendMsg(s, handleCommand(command));
 }
 
 String handleCommand(String input) {
@@ -166,7 +95,7 @@ String handleCommand(String input) {
 
     String command = GetWord(input);
 
-    if (command != "wifi:") { 
+    if (command != "info:") { 
         while (input.length() > 0) {
             if (++argsNo >= MAX_ARGS_LEN) {
                 return "Too many arguments given";
@@ -215,7 +144,7 @@ String handleCommand(String input) {
         String msg = args[0];
         for (int i = 0; i < argsNo; i++)
             msg += " " + args[i];
-        Serial1.println(msg);
+        SerialMsgr::SendMsg(WIFI_SERIAL, msg);
     }
 
     else if (command == "dimmer") {
@@ -258,7 +187,7 @@ String handleCommand(String input) {
 
     else if (command == "reset") {
         for (int i = 0; i < 2; i++)
-            serials[i]->println("=== Software Reset ===");
+            SerialMsgr::SendMsg(i, "=== Software Reset ===");
         delay(50);
         reset();
     }
@@ -285,14 +214,9 @@ String handleCommand(String input) {
         }
     }
 
-    else if (command == "ir") {
-        char *p;
-        handleIrCode(strtoul(args[0].c_str(), &p, 16));
-    }
-
-    else if (command == "wifi:") {
+    else if (command == "info:") {
         for (int i = 0; i < 2; i++)
-            serials[i]->println("WiFi: " + input);
+            SerialMsgr::SendMsg(i, "WiFi: " + input);
     }
 
     else if (command == "?" || command == "help") {
@@ -327,9 +251,13 @@ String handleCommand(String input) {
         man += "string output();\n";
         man += "void output(int led, int value);\n\n";
 
-        man += "void ir(string hexCode);\n\n";
+        man += "string debug();\n\n";
 
         return man;
+    }
+
+    else if (command == "debug") {
+        return "Startup time: " + startupTime.toISO() + "\n" + SerialMsgr::msgHistory;
     }
 
     else {

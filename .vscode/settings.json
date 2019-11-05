@@ -24,6 +24,7 @@
         "cstddef": "cpp",
         "xiosbase": "cpp",
         "iosfwd": "cpp",
-        "*.idl": "cpp"
+        "*.idl": "cpp",
+        "random": "cpp"
     }
 }
