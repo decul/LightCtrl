@@ -52,10 +52,10 @@ public:
 
     static void SendMsg(int s, String msg) {
         if (s == WIFI_SERIAL) {
-            serials[s]->print(msg + "\0");
+            serials[s]->print(msg + "`");
         }
         else {
-            serials[s]->print(msg + "\n");
+            serials[s]->println(msg);
         }
     }
 

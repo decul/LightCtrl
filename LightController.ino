@@ -219,6 +219,13 @@ String handleCommand(String input) {
             SerialMsgr::SendMsg(i, "WiFi: " + input);
     }
 
+    else if (command == "gui") {
+        String html = "<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>";
+        html += "<script type='text/javascript' src='https://decul.github.io/LightCtrl/scripts.js'></script>";
+        html += "<script>loadSite()</script>";
+        return html;
+    }
+
     else if (command == "?" || command == "help") {
         String man = "";
 
