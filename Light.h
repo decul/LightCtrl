@@ -49,7 +49,6 @@ public:
     float GetColor(int index);
     String GetColor();
 
-    void SetOutput(int index, byte value);
     String GetOutput();
     byte GetOutput(int l);
 

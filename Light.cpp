@@ -13,8 +13,6 @@ void Light::UpdateOutput() {
         analogWrite(ledPins[l], GetOutput(l));
     }
     digitalWrite(binaryPin, (powerOn && lightColor[4] == 1.0));
-
-    //Serial.println(String("\t\t") + GetColor());
 }
 
 
@@ -86,12 +84,6 @@ void Light::Power(bool on) {
 void Light::SwitchPower() {
     powerOn = !powerOn;
     UpdateOutput();
-}
-
-void Light::SetOutput(int index, byte value) {
-    lightColor[index] = characteristics.Out2Perc(value, index);
-    UpdateOutput();
-    UpdateDimmer();
 }
 
 byte Light::GetOutput(int l) {

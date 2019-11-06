@@ -154,8 +154,4 @@ public:
         float P = perc2P(perc, color);
         return x2y(P, color, PPos, OutPos) + 0.5;
     }
-
-    float Out2Perc(byte output, byte color) {
-        return 0.0;
-    }
 };

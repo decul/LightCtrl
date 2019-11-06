@@ -70,13 +70,33 @@ public:
     }
 };
 
+
+
 class MillisTimer : public Timer {
+public:
+    MillisTimer() { }
+
+    MillisTimer(long time) {
+        Start(time);
+    }
+
+private:
     inline long getTime() {
         return millis();
     }
 };
 
+
+
 class MicrosTimer : public Timer {
+public:
+    MicrosTimer() { }
+
+    MicrosTimer(long time) {
+        Start(time);
+    }
+
+private:
     inline long getTime() {
         return micros();
     }

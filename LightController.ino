@@ -144,7 +144,8 @@ String handleCommand(String input) {
         String msg = args[0];
         for (int i = 0; i < argsNo; i++)
             msg += " " + args[i];
-        SerialMsgr::SendMsg(WIFI_SERIAL, msg);
+        SerialMsgr::SendWifiMsg(msg);
+        return SerialMsgr::ReadWifiMsg();
     }
 
     else if (command == "dimmer") {
@@ -197,26 +198,6 @@ String handleCommand(String input) {
             return rtc.now().toISO();
         else if (DateTime::FromISO(args[0]).unixtime() != 0)
             rtc.adjust(DateTime::FromISO(args[0]));
-    }
-
-    else if (command == "quick") {
-        analogWrite(light.ledPins[args[0].toInt()], args[1].toInt());
-        delay(5000);
-        digitalWrite(light.ledPins[args[0].toInt()], LOW);
-    }
-
-    else if (command == "output") {
-        if (argsNo == 0) {
-            return light.GetOutput();
-        }
-        else if (argsNo == 2) {
-            light.SetOutput(args[0].toInt(), args[1].toInt());
-        }
-    }
-
-    else if (command == "info:") {
-        for (int i = 0; i < 2; i++)
-            SerialMsgr::SendMsg(i, "WiFi: " + input);
     }
 
     else if (command == "gui") {
