@@ -6,6 +6,7 @@
 #include "MyEEPROM.h"
 #include "SerialMsgr.h"
 #include "IrMsgr.h"
+#include "Memory.h"
 //#include <OneWire.h>
 
 RTC_DS1307 rtc;
@@ -47,7 +48,7 @@ void loop() {
     if (irCommand != "") 
         handleCommand(irCommand);
 
-    light.HandleStrobe();
+    // light.HandleStrobe();
     light.HandleAutoDimming();
 
     switch (button.GetAction()) {
@@ -64,29 +65,10 @@ void loop() {
             break;
     }
 
-    xmas.Run();
+    // xmas.Run();
 }
 
 
-
-
-
-void serialEvent() { 
-    handleSerialEvent(PC_SERIAL);
-}
-
-void serialEvent1 () { 
-    handleSerialEvent(WIFI_SERIAL);
-}
-
-void serialEvent3 () { 
-    handleSerialEvent(BT_SERIAL);
-}
-
-void handleSerialEvent(int s) {
-    String command = SerialMsgr::ReadMsg(s);
-    SerialMsgr::SendMsg(s, handleCommand(command));
-}
 
 String handleCommand(String input) {
     const byte MAX_ARGS_LEN = 8;
@@ -95,13 +77,11 @@ String handleCommand(String input) {
 
     String command = GetWord(input);
 
-    if (command != "info:") { 
-        while (input.length() > 0) {
-            if (++argsNo >= MAX_ARGS_LEN) {
-                return "Too many arguments given";
-            }
-            args[argsNo - 1] = GetWord(input);
+    while (input.length() > 0) {
+        if (++argsNo >= MAX_ARGS_LEN) {
+            return "Too many arguments given";
         }
+        args[argsNo - 1] = GetWord(input);
     }
 
 
@@ -165,6 +145,12 @@ String handleCommand(String input) {
             return "Invalid arguments";
     }
 
+    else if (command == "filter") {
+        light.filterEnabled = !light.filterEnabled;
+        light.UpdateOutput();
+        return light.filterEnabled ? "ON" : "OFF";
+    }
+
     else if (command == "strobe") {
         if (argsNo == 0)
             light.StopStrobe();
@@ -186,7 +172,7 @@ String handleCommand(String input) {
             xmas.Switch();
     }
 
-    else if (command == "reset") {
+    else if (command == "orderrestart") {
         for (int i = 0; i < 2; i++)
             SerialMsgr::SendMsg(i, "=== Software Reset ===");
         delay(50);
@@ -224,6 +210,8 @@ String handleCommand(String input) {
         man += "void dimmer([on/off/setdefcol/gettime]);\n";
         man += "void dimmer([settime], string iso);\n\n";
 
+        man += "string filter();\n\n";
+
         man += "void strobe(float width, float freq);\n";
         man += "void strobe();\n\n";
 
@@ -231,13 +219,10 @@ String handleCommand(String input) {
 
         man += "void xmas();\n\n";
 
-        man += "void reset();\n\n";
+        man += "void orderrestart();\n\n";
 
         man += "string time();\n";
         man += "void time(string isoTime);\n\n";
-
-        man += "string output();\n";
-        man += "void output(int led, int value);\n\n";
 
         man += "string debug();\n\n";
 
@@ -245,7 +230,11 @@ String handleCommand(String input) {
     }
 
     else if (command == "debug") {
-        return "Startup time: " + startupTime.toISO() + "\n" + SerialMsgr::msgHistory;
+        return "Startup time: " + startupTime.toISO() + "\nAvailable memory: " + String(FreeMemory()) + "B";
+    }
+
+    else if (command == "ok" || command == "" || command == "unknown"){
+        return "";
     }
 
     else {

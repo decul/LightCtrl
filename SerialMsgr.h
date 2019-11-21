@@ -9,7 +9,6 @@
 
 class SerialMsgr {
 public:
-    static String msgHistory;
     static HardwareSerial* serials[4];
 
     static void Initialize() {
@@ -18,7 +17,7 @@ public:
         serials[WIFI_SERIAL] = &Serial1;
 
         serials[PC_SERIAL]->begin(115200);
-        serials[WIFI_SERIAL]->begin(115200);
+        //serials[WIFI_SERIAL]->begin(115200);
         serials[BT_SERIAL]->begin(9600);
     }
 
@@ -41,14 +40,7 @@ public:
         }
 
         msg.trim();
-
-        if (msg.length() > 0) {
-            msg.toLowerCase();
-            msgHistory += "[" + String(s) + "] " + msg + "\n";
-            while (msgHistory.length() > 200) {
-                msgHistory.remove(0, msgHistory.indexOf('\n') + 1);
-            }
-        }
+        msg.toLowerCase();
 
         return msg;
     }
@@ -83,6 +75,28 @@ public:
     }
 };
 
-
-String SerialMsgr::msgHistory;
 HardwareSerial* SerialMsgr::serials[4];
+
+
+
+
+String handleCommand(String cmd);
+
+void handleSerialEvent(byte s) {
+    String command = SerialMsgr::ReadMsg(s);
+    String response = handleCommand(command);
+    if (response.length() > 0)
+        SerialMsgr::SendMsg(s, response);
+}
+
+void serialEvent() { 
+    handleSerialEvent(PC_SERIAL);
+}
+
+void serialEvent1 () { 
+    handleSerialEvent(WIFI_SERIAL);
+}
+
+void serialEvent3 () { 
+    handleSerialEvent(BT_SERIAL);
+}

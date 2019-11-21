@@ -33,6 +33,7 @@ private:
 
 public:
     const byte ledPins[COLOR_COUNT] = { 2, 6, 10, 11, 9 };
+    bool filterEnabled = true;
     
     Light();
     

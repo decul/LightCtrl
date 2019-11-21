@@ -12,7 +12,8 @@ void Light::UpdateOutput() {
     for (int l = 0; l < COLOR_COUNT; l++) {
         analogWrite(ledPins[l], GetOutput(l));
     }
-    digitalWrite(binaryPin, (powerOn && lightColor[4] == 1.0));
+    //digitalWrite(binaryPin, (powerOn && lightColor[4] == 1.0));
+    analogWrite(binaryPin, GetOutput(5));
 }
 
 
@@ -86,13 +87,24 @@ void Light::SwitchPower() {
     UpdateOutput();
 }
 
-byte Light::GetOutput(int l) {
+byte Light::GetOutput(int _l) {
+    int l = _l;
+    if (!filterEnabled) {
+        if (_l == 4)
+            return 0;
+        if (_l == 5)
+            l = 4;
+    }
+    if (l == 5) {
+        return (powerOn && lightColor[4] == 1.0) ? 255 : 0;
+    }
+    
     if (!powerOn || lightColor[l] == 0.0) 
         return 0;
     else if (lightColor[l] == 1.0) 
         return 255;
     else 
-        return characteristics.Perc2Out(lightColor[l], l);
+        return characteristics.Perc2Out(lightColor[l], _l);
 }
 
 String Light::GetOutput() {
