@@ -5,7 +5,7 @@ class Button {
     const byte buttonPin;
     const byte holdTime = 5;
     const byte chainTime = 150;
-    const byte continuousTime = 100;
+    const byte continuousTime = 10;
 
     byte state = 1;
 

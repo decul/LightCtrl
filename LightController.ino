@@ -29,6 +29,8 @@ void setup() {
     SerialMsgr::Initialize();
     IrMsgr::Initialize();
     
+    SerialMsgr::Debug("Arduino Started");
+    
     if (!rtc.begin()) {
         Serial.println("Couldn't find RTC");
     }
@@ -48,7 +50,7 @@ void loop() {
     if (irCommand != "") 
         handleCommand(irCommand);
 
-    // light.HandleStrobe();
+    light.HandleStrobe();
     light.HandleAutoDimming();
 
     switch (button.GetAction()) {
@@ -57,15 +59,15 @@ void loop() {
             break;
 
         case Button::HOLD:
-            light.Brighten(4);
+            light.Adjust(4, 0.004);
             break;
 
         case Button::CLICK_HOLD:
-            light.Darken(4);
+            light.Adjust(4, -0.004);
             break;
     }
 
-    // xmas.Run();
+    xmas.Run();
 }
 
 
@@ -101,9 +103,9 @@ String handleCommand(String input) {
         }
         else if (argsNo == 2) {
             if (args[1] == "+")
-                light.Brighten(args[0].toInt());
+                light.Adjust(args[0].toInt(), 0.04);
             else if (args[1] == "-")
-                light.Darken(args[0].toInt());
+                light.Adjust(args[0].toInt(), -0.04);
             else if (args[1] == "switch")
                 light.Switch(args[0].toInt());
             else
@@ -125,7 +127,7 @@ String handleCommand(String input) {
         for (int i = 0; i < argsNo; i++)
             msg += " " + args[i];
         SerialMsgr::SendWifiMsg(msg);
-        return SerialMsgr::ReadWifiMsg();
+        return SerialMsgr::ReadWifiMsg(true);
     }
 
     else if (command == "dimmer") {
@@ -184,13 +186,6 @@ String handleCommand(String input) {
             return rtc.now().toISO();
         else if (DateTime::FromISO(args[0]).unixtime() != 0)
             rtc.adjust(DateTime::FromISO(args[0]));
-    }
-
-    else if (command == "gui") {
-        String html = "<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>";
-        html += "<script type='text/javascript' src='https://decul.github.io/LightCtrl/scripts.js'></script>";
-        html += "<script>loadSite()</script>";
-        return html;
     }
 
     else if (command == "?" || command == "help") {
@@ -261,4 +256,25 @@ String GetWord(String &input) {
     result.trim();
 
     return result;
+}
+
+
+
+float prevU = 0.0;
+
+void MeasureVoltage() {
+    int _U = 0;
+    int n = 1000;
+    float margin = 0.15;
+    for (int i = 0; i < n; i++)
+        _U += digitalRead(A0);
+    float U = _U * 5.0 / n;
+
+    if (U < prevU - margin) {
+        SerialMsgr::Debug("Voltage dropped from " + String(prevU) + "V to " + String(U) + "V");
+    }
+    if (U > prevU + margin) {
+        SerialMsgr::Debug("Voltage jumped from " + String(prevU) + "V to " + String(U) + "V");
+    }
+    prevU = U;
 }

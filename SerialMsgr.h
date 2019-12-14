@@ -2,10 +2,14 @@
 #include <Arduino.h>
 #include "Timer.h"
 
+#define TIMEOUT 5000L
+
 #define PC_SERIAL 0
 #define BT_SERIAL 1
 #define WIFI_SERIAL 2
 
+#define MSG_BEG '#'
+#define MSG_END '$'
 
 class SerialMsgr {
 public:
@@ -17,7 +21,7 @@ public:
         serials[WIFI_SERIAL] = &Serial1;
 
         serials[PC_SERIAL]->begin(115200);
-        //serials[WIFI_SERIAL]->begin(115200);
+        serials[WIFI_SERIAL]->begin(115200);
         serials[BT_SERIAL]->begin(9600);
     }
 
@@ -30,7 +34,7 @@ public:
         else {
             while (serials[s]->available()) {
                 char c = serials[s]->read();
-                if (c == '\n' || c == '`')
+                if (c == '\n')
                     break;
                 msg += c;
 
@@ -45,18 +49,26 @@ public:
         return msg;
     }
 
-    static String ReadWifiMsg() {
+    static String ReadWifiMsg(bool wait = false) {
         String msg = "";
-        MillisTimer timeoutTimer(5000L);
+        bool validStart = false;
+        MillisTimer timeoutTimer(TIMEOUT);
         
-        while (!timeoutTimer.HasExpired()) {
+        do {
             while (serials[WIFI_SERIAL]->available()) {
                 char c = serials[WIFI_SERIAL]->read();
-                if (c == '`') 
+                if (c == MSG_BEG) {
+                    msg = "";
+                    validStart = true;
+                }
+                else if (c == MSG_END && validStart) {
                     return msg;
-                msg += c;
+                }
+                else {
+                    msg += c;
+                }
             }
-        }
+        } while (!timeoutTimer.HasExpired() && (wait || validStart));
 
         return "";
     }
@@ -71,7 +83,11 @@ public:
     }
 
     static void SendWifiMsg(String msg) {
-        serials[WIFI_SERIAL]->print(msg + "`");
+        serials[WIFI_SERIAL]->print(MSG_BEG + msg + MSG_END);
+    }
+
+    static void Debug(String msg) {
+        SendWifiMsg("savedebug " + msg);
     }
 };
 
@@ -83,7 +99,9 @@ HardwareSerial* SerialMsgr::serials[4];
 String handleCommand(String cmd);
 
 void handleSerialEvent(byte s) {
+    SerialMsgr::Debug("Msg from " + String(s));
     String command = SerialMsgr::ReadMsg(s);
+    SerialMsgr::Debug(command);
     String response = handleCommand(command);
     if (response.length() > 0)
         SerialMsgr::SendMsg(s, response);

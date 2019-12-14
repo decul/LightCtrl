@@ -17,18 +17,11 @@ void Light::UpdateOutput() {
 }
 
 
-void Light::Brighten(int index) {
+void Light::Adjust(int index, double value) {
     Power(true);
-    lightColor[index] += 0.04;
+    lightColor[index] += value;
     if (lightColor[index] > 1.0)
         lightColor[index] = 1.0;
-    UpdateOutput();
-    UpdateDimmer();
-}
-
-void Light::Darken(int index) {
-    Power(true);
-    lightColor[index] -= 0.04;
     if (lightColor[index] < 0.0)
         lightColor[index] = 0.0;
     UpdateOutput();

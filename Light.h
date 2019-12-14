@@ -33,15 +33,14 @@ private:
 
 public:
     const byte ledPins[COLOR_COUNT] = { 2, 6, 10, 11, 9 };
-    bool filterEnabled = true;
+    bool filterEnabled = false;
     
     Light();
     
     void UpdateOutput();
 
-    void Brighten(int index);
-    void Darken(int index);
 
+    void Adjust(int index, double value);
     void Switch(int index);
 
     void SetColor(int index, float value);
