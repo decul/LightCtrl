@@ -14,10 +14,7 @@ class Button {
     bool pressed() {
         if (digitalRead(buttonPin) == HIGH) {
             delay(holdTime);
-            bool btn = digitalRead(buttonPin) == HIGH;
-            if (!btn)
-                Serial.println("Button press discarded");
-            return btn;
+            return digitalRead(buttonPin) == HIGH;
         }
         return false;
     }
@@ -25,10 +22,7 @@ class Button {
     bool released() {
         if (digitalRead(buttonPin) == LOW) {
             delay(holdTime);
-            bool btn = digitalRead(buttonPin) == HIGH;
-            if (btn)
-                Serial.println("Button release discarded");
-            return !btn;
+            return digitalRead(buttonPin) == LOW;
         }
         return false;
     }
@@ -62,66 +56,66 @@ public:
 
             // Waiting for release
             case 2:
-                if (timer.HasExpired()) {
-                    state = 3;
-                    timer.AddTime(continuousTime);
-                    return HOLD;
-                }
-                else if (released()) {
+                if (released()) {
                     state = 4;
                     timer.Start(chainTime);
                     return UP;
+                }
+                else if (timer.HasExpired()) {
+                    state = 3;
+                    timer.AddTime(continuousTime);
+                    return HOLD;
                 }
                 break;
 
             // Holding
             case 3:
-                if (timer.HasExpired()) {
-                    timer.Continue();
-                    return HOLD;
-                }
-                else if (released()) {
+                if (released()) {
                     state = 1;
                     return UP;
+                }
+                else if (timer.HasExpired()) {
+                    timer.Continue();
+                    return HOLD;
                 }
                 break;
 
             // Waiting for 2nd click
             case 4:
-                if (timer.HasExpired()) {
-                    state = 1;
-                    return CLICK;
-                }
-                else if (pressed()) {
+                if (pressed()) {
                     state = 5;
                     timer.Start(chainTime);
                     return DOWN;
+                }
+                else if (timer.HasExpired()) {
+                    state = 1;
+                    return CLICK;
                 }
                 break;
 
             // Waiting for 2nd release
             case 5:
-                if (timer.HasExpired()) {
-                    state = 6;
-                    timer.AddTime(continuousTime);
-                    return CLICK_HOLD;
-                }
-                else if (released()) {
+                if (released()) {
                     state = 7;
                     timer.Start(chainTime);
                     return UP;
+                }
+                else if (timer.HasExpired()) {
+                    state = 6;
+                    timer.AddTime(continuousTime);
+                    return CLICK_HOLD;
                 }
                 break;
 
             // Holding after click
             case 6: 
-                if (timer.HasExpired()) {
-                    timer.Continue();
-                    return CLICK_HOLD;
-                }
-                else if (released()) {
+                if (released()) {
                     state = 1;
                     return UP;
+                }
+                else if (timer.HasExpired()) {
+                    timer.Continue();
+                    return CLICK_HOLD;
                 }
                 break;
 

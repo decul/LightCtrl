@@ -6,6 +6,7 @@ Light::Light() {
 	for (int l = 0; l < COLOR_COUNT; l++) 
         pinMode(ledPins[l], OUTPUT);
     pinMode(binaryPin, OUTPUT);
+    Power(memory.IsOnByDefault());
 }
 
 void Light::UpdateOutput() {
@@ -72,12 +73,12 @@ void Light::Power(bool on) {
     if (powerOn != on) {
         powerOn = on;
         UpdateOutput();
+        memory.SetOnByDefault(on);
     }
 }
     
 void Light::SwitchPower() {
-    powerOn = !powerOn;
-    UpdateOutput();
+    Power(!powerOn);
 }
 
 byte Light::GetOutput(int _l) {
@@ -159,7 +160,6 @@ void Light::HandleAutoDimming() {
 
         if (now > dimmerEndTime) 
             dimmerFinished = true;
-            
     }
 }
 
@@ -174,7 +174,12 @@ void Light::ResetDimmer() {
     dimmerFinished = false;
     DateTime now = rtc.now();
 
-    dimmerEndTime = DateTime::ClosestDate(now, memory.GetDefaultDimEndTime());
+    Time dimEnd = memory.GetDefaultDimEndTime();
+    dimmerEndTime = DateTime::ClosestDate(now, dimEnd);
+
+    if (now.time() > dimEnd || now.hour() < defDimmerResetHour)
+        dimmerEndTime = now;
+
     dimmerStartTime = dimmerEndTime - TimeSpan(0, defDimmerSpan, 0, 0);
     dimmerResetTime = DateTime::ClosestDate(now, Time(defDimmerResetHour));
 }

@@ -73,6 +73,9 @@ struct Time {
         return iso;
     }
 
+    inline long totalSeconds() { return s + 60 * m + 3600 * h; }
+    inline bool operator<(const Time& right) { return totalSeconds() < right.totalSeconds(); }
+    inline bool operator>(const Time& right) { return totalSeconds() > right.totalSeconds(); }
     inline bool operator!=(const Time& right) { return h != right.h || m != right.m || s != right.s; }
 };
 
@@ -104,6 +107,8 @@ public:
 
     inline bool operator>(const DateTime& right) { return secondstime() > right.secondstime(); }
     inline bool operator<(const DateTime& right) { return secondstime() < right.secondstime(); }
+
+    Time time() { return Time(hh, mm, ss); }
 
     String toISO() {
         char iso[20];

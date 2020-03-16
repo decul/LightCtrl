@@ -7,7 +7,6 @@
 #include "SerialMsgr.h"
 #include "IrMsgr.h"
 #include "Memory.h"
-//#include <OneWire.h>
 
 RTC_DS1307 rtc;
 MyEEPROM memory;
@@ -64,6 +63,10 @@ void loop() {
 
         case Button::CLICK_HOLD:
             light.Adjust(4, -0.004);
+            break;
+
+        case Button::DOUBLE_CLICK:
+            xmas.Switch();
             break;
     }
 
@@ -174,7 +177,7 @@ String handleCommand(String input) {
             xmas.Switch();
     }
 
-    else if (command == "orderrestart") {
+    else if (command == "reset") {
         for (int i = 0; i < 2; i++)
             SerialMsgr::SendMsg(i, "=== Software Reset ===");
         delay(50);
@@ -214,7 +217,7 @@ String handleCommand(String input) {
 
         man += "void xmas();\n\n";
 
-        man += "void orderrestart();\n\n";
+        man += "void reset();\n\n";
 
         man += "string time();\n";
         man += "void time(string isoTime);\n\n";
@@ -256,25 +259,4 @@ String GetWord(String &input) {
     result.trim();
 
     return result;
-}
-
-
-
-float prevU = 0.0;
-
-void MeasureVoltage() {
-    int _U = 0;
-    int n = 1000;
-    float margin = 0.15;
-    for (int i = 0; i < n; i++)
-        _U += digitalRead(A0);
-    float U = _U * 5.0 / n;
-
-    if (U < prevU - margin) {
-        SerialMsgr::Debug("Voltage dropped from " + String(prevU) + "V to " + String(U) + "V");
-    }
-    if (U > prevU + margin) {
-        SerialMsgr::Debug("Voltage jumped from " + String(prevU) + "V to " + String(U) + "V");
-    }
-    prevU = U;
 }
