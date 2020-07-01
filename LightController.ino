@@ -98,6 +98,10 @@ String handleCommand(String input) {
         light.Power(false);
     }
 
+    else if (command == "switch") {
+        light.SwitchPower();
+    }
+
     else if (command == "color") {
         if (argsNo == COLOR_COUNT) {
             for (int i = 0; i < COLOR_COUNT; i++) {
