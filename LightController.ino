@@ -1,54 +1,30 @@
-#include "Xmas.h"
 #include "Light.h"
 #include "Button.h"
 #include <Arduino.h>
-#include "RTClib.h"
+#include <MillisTime.h>
 #include "MyEEPROM.h"
 #include "SerialMsgr.h"
-#include "IrMsgr.h"
-#include "Memory.h"
 
-RTC_DS1307 rtc;
 MyEEPROM memory;
 
 
 Light light;
-Xmas xmas(&light);
-Button button(A10);
+Button button(A0);
 
 
 //declare reset function @ address 0
 void (*reset) (void) = 0; 
 
-DateTime startupTime;
-
-
 
 void setup() {
     SerialMsgr::Initialize();
-    IrMsgr::Initialize();
-    
-    SerialMsgr::Debug("Arduino Started");
-    
-    if (!rtc.begin()) {
-        Serial.println("Couldn't find RTC");
-    }
-    if (!rtc.isrunning()) {
-        Serial.println("RTC is NOT running!");
-        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    }
-    startupTime = rtc.now();
-    
     light.ResetDimmer();
+    
 }
 
 
 
 void loop() {
-    String irCommand = IrMsgr::GetCommand();
-    if (irCommand != "") 
-        handleCommand(irCommand);
-
     light.HandleStrobe();
     light.HandleAutoDimming();
 
@@ -64,13 +40,7 @@ void loop() {
         case Button::CLICK_HOLD:
             light.Adjust(4, -0.004);
             break;
-
-        case Button::DOUBLE_CLICK:
-            xmas.Switch();
-            break;
     }
-
-    xmas.Run();
 }
 
 
@@ -80,13 +50,13 @@ String handleCommand(String input) {
     String args[MAX_ARGS_LEN];
     byte argsNo = 0;
 
-    String command = GetWord(input);
+    String command = SerialMsgr::GetWord(input);
 
     while (input.length() > 0) {
         if (++argsNo >= MAX_ARGS_LEN) {
             return "Too many arguments given";
         }
-        args[argsNo - 1] = GetWord(input);
+        args[argsNo - 1] = SerialMsgr::GetWord(input);
     }
 
 
@@ -127,16 +97,6 @@ String handleCommand(String input) {
             return "Wrong number of arguments";
     }
 
-    else if (command == "wifi") {
-        if (argsNo == 0)
-            return "No arguments given";
-        String msg = args[0];
-        for (int i = 0; i < argsNo; i++)
-            msg += " " + args[i];
-        SerialMsgr::SendWifiMsg(msg);
-        return SerialMsgr::ReadWifiMsg(true);
-    }
-
     else if (command == "dimmer") {
         if (argsNo == 0)
             return "No arguments given";
@@ -147,9 +107,9 @@ String handleCommand(String input) {
         else if (args[0] == "setdefcol")
             light.SetColorAsDefault();
         else if (args[0] == "gettime")
-            return memory.GetDefaultDimEndTime().toISO();
+            return memory.GetDefaultDimEndTime().ToString();
         else if (args[0] == "settime" && argsNo == 2)
-            memory.SetDefaultDimEndTime(Time::FromISO(args[1]));
+            memory.SetDefaultDimEndTime(Time::FromString(args[1]));
         else 
             return "Invalid arguments";
     }
@@ -176,23 +136,18 @@ String handleCommand(String input) {
             light.Flash(args[0].toInt());
     }
 
-    else if (command == "xmas") {
-        if (argsNo == 0)
-            xmas.Switch();
-    }
-
     else if (command == "reset") {
         for (int i = 0; i < 2; i++)
-            SerialMsgr::SendMsg(i, "=== Software Reset ===");
+            Serial.println("=== Software Reset ===");
         delay(50);
         reset();
     }
 
     else if (command == "time") {
         if (argsNo == 0)
-            return rtc.now().toISO();
-        else if (DateTime::FromISO(args[0]).unixtime() != 0)
-            rtc.adjust(DateTime::FromISO(args[0]));
+            return DateTime::Now().ToISO();
+        else if (DateTime::FromISO(args[0]).UnixTime() != 0)
+            DateTime::Adjust(DateTime::FromISO(args[0]));
     }
 
     else if (command == "?" || command == "help") {
@@ -207,8 +162,6 @@ String handleCommand(String input) {
         man += "string color(int led, [+/-/switch]);\n";
         man += "string color(float col[5]);\n\n";
 
-        man += "void wifi([help/?]);\n\n";
-
         man += "void dimmer([on/off/setdefcol/gettime]);\n";
         man += "void dimmer([settime], string iso);\n\n";
 
@@ -218,8 +171,6 @@ String handleCommand(String input) {
         man += "void strobe();\n\n";
 
         man += "void flash(int micros);\n\n";
-
-        man += "void xmas();\n\n";
 
         man += "void reset();\n\n";
 
@@ -232,7 +183,7 @@ String handleCommand(String input) {
     }
 
     else if (command == "debug") {
-        return "Startup time: " + startupTime.toISO() + "\nAvailable memory: " + String(FreeMemory()) + "B";
+        return "Debug data not available";
     }
 
     else if (command == "ok" || command == "" || command == "unknown"){
@@ -244,23 +195,4 @@ String handleCommand(String input) {
     }
 
     return "OK";
-}
-
-String GetWord(String &input) {
-    String result;
-    int spaceIndex = input.indexOf(' ');
-
-    if (spaceIndex > -1) {
-        result = input.substring(0, spaceIndex);
-        input.remove(0, spaceIndex + 1);
-    }
-    else {
-        result = input.substring(0, input.length());
-        input.remove(0, input.length());
-    }
-
-    input.trim();
-    result.trim();
-
-    return result;
 }

@@ -1,6 +1,5 @@
 #pragma once
 #include <EEPROM.h>
-#include "RTClib.h"
 
 // 1 byte variables
 #define onByDefaultAddr 0x100

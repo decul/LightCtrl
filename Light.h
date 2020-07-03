@@ -1,15 +1,13 @@
 #pragma once
 #include <Arduino.h>
 #include "LedCharacteristics.h"
-#include "Timer.h"
-#include "RTClib.h"
+#include <MillisTime.h>
 #include "MyEEPROM.h"
 
 #define COLOR_COUNT 5
 
 class Light {
 private:
-    RTC_DS1307 rtc;
     MyEEPROM memory;
 
     LedCharacteristics characteristics;

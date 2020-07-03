@@ -1,5 +1,4 @@
 #include "Light.h"
-#include <USBAPI.h>
 #include <math.h>
 
 Light::Light() {
@@ -141,7 +140,7 @@ void Light::StopStrobe() {
 #define dimmerMinPeriod 30
 
 void Light::HandleAutoDimming() {
-    DateTime now = rtc.now();
+    DateTime now = DateTime::Now();
     
     // Reset dimmer once a day
     if (now > dimmerResetTime && !powerOn) {
@@ -152,7 +151,7 @@ void Light::HandleAutoDimming() {
     if (!dimmerDisabled && !dimmerFinished && now > dimmerStartTime) {
         TimeSpan dimmerSpan = dimmerEndTime - dimmerStartTime;
         TimeSpan timeRemaining = dimmerEndTime - now;
-        float percent = max(0.0, (float)timeRemaining.totalseconds() / dimmerSpan.totalseconds());
+        float percent = max(0.0f, (float)timeRemaining.TotalSeconds() / dimmerSpan.TotalSeconds());
 
         for (int i = 2; i < COLOR_COUNT; i++) 
             lightColor[i] = percent * dimmerInitColor[i];
@@ -172,12 +171,12 @@ void Light::ResetDimmer() {
 
     dimmerDisabled = false;
     dimmerFinished = false;
-    DateTime now = rtc.now();
+    DateTime now = DateTime::Now();
 
     Time dimEnd = memory.GetDefaultDimEndTime();
     dimmerEndTime = DateTime::ClosestDate(now, dimEnd);
 
-    if (now.time() > dimEnd || now.hour() < defDimmerResetHour)
+    if (now.time() > dimEnd || now.Hour() < defDimmerResetHour)
         dimmerEndTime = now;
 
     dimmerStartTime = dimmerEndTime - TimeSpan(0, defDimmerSpan, 0, 0);
@@ -203,7 +202,7 @@ void Light::UpdateDimmer() {
         dimmerInitColor[i] = lightColor[i];
     dimmerFinished = false;
 
-    DateTime now = rtc.now();
+    DateTime now = DateTime::Now();
     if (now > dimmerStartTime) {
         dimmerStartTime = now;
 
