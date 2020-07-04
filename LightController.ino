@@ -30,15 +30,15 @@ void loop() {
 
     switch (button.GetAction()) {
         case Button::CLICK:
-            light.SwitchPower();
+            light.Switch();
             break;
 
         case Button::HOLD:
-            light.Adjust(4, 0.004);
+            light.AdjustColor(4, 0.004);
             break;
 
         case Button::CLICK_HOLD:
-            light.Adjust(4, -0.004);
+            light.AdjustColor(4, -0.004);
             break;
     }
 }
@@ -69,32 +69,17 @@ String handleCommand(String input) {
     }
 
     else if (command == "switch") {
-        light.SwitchPower();
+        light.Switch();
     }
 
     else if (command == "color") {
-        if (argsNo == COLOR_COUNT) {
-            for (int i = 0; i < COLOR_COUNT; i++) {
-                light.SetColor(i, args[i].toFloat());
-            }
-        }
-        else if (argsNo == 2) {
-            if (args[1] == "+")
-                light.Adjust(args[0].toInt(), 0.04);
-            else if (args[1] == "-")
-                light.Adjust(args[0].toInt(), -0.04);
-            else if (args[1] == "switch")
-                light.Switch(args[0].toInt());
-            else
-                light.SetColor(args[0].toInt(), args[1].toFloat());
-            return light.GetColor();
-        }
-        else if (argsNo == 1)
-            return String(light.GetColor(args[0].toInt()));
-        else if (argsNo == 0)
-            return light.GetColor();
-        else 
-            return "Wrong number of arguments";
+        switch (argsNo) {
+            case 0:     return light.GetColors();
+            case 1:     return String(light.GetColor(args[0].toInt()));
+            case 2:     light.SetColor(args[0].toInt(), args[1].toFloat());     break;
+            case 5:     light.SetColors(args);                                  break;
+            default:    return "Wrong number of arguments";
+        } 
     }
 
     else if (command == "dimmer") {
@@ -112,12 +97,6 @@ String handleCommand(String input) {
             memory.SetDefaultDimEndTime(Time::FromString(args[1]));
         else 
             return "Invalid arguments";
-    }
-
-    else if (command == "filter") {
-        light.filterEnabled = !light.filterEnabled;
-        light.UpdateOutput();
-        return light.filterEnabled ? "ON" : "OFF";
     }
 
     else if (command == "strobe") {
@@ -154,18 +133,16 @@ String handleCommand(String input) {
         String man = "";
 
         man += "void on();\n";
-        man += "void off();\n\n";
+        man += "void off();\n";
+        man += "void switch();\n\n";
 
         man += "string color();\n";
         man += "float color(int led);\n";
-        man += "string color(int led, float value);\n";
-        man += "string color(int led, [+/-/switch]);\n";
-        man += "string color(float col[5]);\n\n";
+        man += "void color(int led, float value);\n";
+        man += "void color(float col[5]);\n\n";
 
         man += "void dimmer([on/off/setdefcol/gettime]);\n";
         man += "void dimmer([settime], string iso);\n\n";
-
-        man += "string filter();\n\n";
 
         man += "void strobe(float width, float freq);\n";
         man += "void strobe();\n\n";
@@ -184,10 +161,6 @@ String handleCommand(String input) {
 
     else if (command == "debug") {
         return "Debug data not available";
-    }
-
-    else if (command == "ok" || command == "" || command == "unknown"){
-        return "";
     }
 
     else {

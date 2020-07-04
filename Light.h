@@ -1,6 +1,5 @@
 #pragma once
 #include <Arduino.h>
-#include "LedCharacteristics.h"
 #include <MillisTime.h>
 #include "MyEEPROM.h"
 
@@ -10,12 +9,7 @@ class Light {
 private:
     MyEEPROM memory;
 
-    LedCharacteristics characteristics;
-
-    const byte binaryPin = 8;
-
     float lightColor[COLOR_COUNT];
-
     bool powerOn = false;
 
     bool strobeEnabled = false;
@@ -31,27 +25,24 @@ private:
 
 public:
     const byte ledPins[COLOR_COUNT] = { 2, 6, 10, 11, 9 };
-    bool filterEnabled = false;
     
     Light();
     
     void UpdateOutput();
 
-
-    void Adjust(int index, double value);
-    void Switch(int index);
-
+    void AdjustColor(int index, double value);
     void SetColor(int index, float value);
-    void SetColor(float* color, int count = COLOR_COUNT);
+    void SetColors(float* color, int count = COLOR_COUNT);
+    void SetColors(String* rgbwy);
 
     float GetColor(int index);
-    String GetColor();
+    String GetColors();
 
-    String GetOutput();
+    String GetOutputs();
     byte GetOutput(int l);
 
     void Power(bool on);
-    void SwitchPower();
+    void Switch();
 
     void StartStrobe(float width, float frequency);
     void HandleStrobe();

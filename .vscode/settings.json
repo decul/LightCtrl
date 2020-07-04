@@ -1,6 +1,7 @@
 {
     "C_Cpp.intelliSenseEngineFallback": "Enabled",
     "files.associations": {
+        "config.json": "jsonc",
         "algorithm": "cpp",
         "forward_list": "cpp",
         "list": "cpp",
@@ -25,6 +26,9 @@
         "xiosbase": "cpp",
         "iosfwd": "cpp",
         "*.idl": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "functional": "cpp",
+        "optional": "cpp",
+        "limits": "cpp"
     }
 }

@@ -4,52 +4,39 @@
 Light::Light() {
 	for (int l = 0; l < COLOR_COUNT; l++) 
         pinMode(ledPins[l], OUTPUT);
-    pinMode(binaryPin, OUTPUT);
     Power(memory.IsOnByDefault());
 }
 
 void Light::UpdateOutput() {
-    for (int l = 0; l < COLOR_COUNT; l++) {
+    for (int l = 0; l < COLOR_COUNT; l++) 
         analogWrite(ledPins[l], GetOutput(l));
-    }
-    //digitalWrite(binaryPin, (powerOn && lightColor[4] == 1.0));
-    analogWrite(binaryPin, GetOutput(5));
 }
 
 
-void Light::Adjust(int index, double value) {
+void Light::AdjustColor(int index, double difference) {
     Power(true);
-    lightColor[index] += value;
-    if (lightColor[index] > 1.0)
-        lightColor[index] = 1.0;
-    if (lightColor[index] < 0.0)
-        lightColor[index] = 0.0;
-    UpdateOutput();
-    UpdateDimmer();
-}
-
-
-void Light::Switch(int index) {
-    Power(true);
-    if (lightColor[index] > 0.0)
-        lightColor[index] = 0.0;
-    else
-        lightColor[index] = 1.0;
+    lightColor[index] += max(0.0, min(1.0, lightColor[index] + difference));
     UpdateOutput();
     UpdateDimmer();
 }
 
 
 void Light::SetColor(int index, float value) {
-    if (value > 1.0)
-        value = (value - 2.0) / 100.0;
-    lightColor[index] = value;
+    lightColor[index] = max(0.0f, min(1.0f, value));
     UpdateOutput();
     UpdateDimmer();
 }
 
-void Light::SetColor(float* rgbwy, int count) {
-    memcpy(lightColor, rgbwy, sizeof(float) * count);
+void Light::SetColors(float* rgbwy, int count) {
+    for (int l = 0; l < count; l++)
+        lightColor[l] = max(0.0f, min(1.0f, rgbwy[l]));
+    UpdateOutput();
+    UpdateDimmer();
+}
+
+void Light::SetColors(String* rgbwy) {
+    for (int l = 0; l < COLOR_COUNT; l++)
+        lightColor[l] = max(0.0f, min(1.0f, rgbwy[l].toFloat()));
     UpdateOutput();
     UpdateDimmer();
 }
@@ -58,12 +45,10 @@ float Light::GetColor(int index) {
     return lightColor[index];
 }
 
-String Light::GetColor() {
+String Light::GetColors() {
     String str = "";
-    for (int l = 0; l < COLOR_COUNT; l++) {
-        str += lightColor[l];
-        str += " ";
-    }
+    for (int l = 0; l < COLOR_COUNT; l++) 
+        str += String(lightColor[l]) + " ";
     return str;
 }
 
@@ -76,36 +61,21 @@ void Light::Power(bool on) {
     }
 }
     
-void Light::SwitchPower() {
+void Light::Switch() {
     Power(!powerOn);
 }
 
-byte Light::GetOutput(int _l) {
-    int l = _l;
-    if (!filterEnabled) {
-        if (_l == 4)
-            return 0;
-        if (_l == 5)
-            l = 4;
-    }
-    if (l == 5) {
-        return (powerOn && lightColor[4] == 1.0) ? 255 : 0;
-    }
-    
+byte Light::GetOutput(int l) {
     if (!powerOn || lightColor[l] == 0.0) 
         return 0;
-    else if (lightColor[l] == 1.0) 
-        return 255;
     else 
-        return characteristics.Perc2Out(lightColor[l], _l);
+        return pow(255, lightColor[l]);
 }
 
-String Light::GetOutput() {
+String Light::GetOutputs() {
     String str = "";
-    for (int l = 0; l < COLOR_COUNT; l++) {
-        str += GetOutput(l);
-        str += " ";
-    }
+    for (int l = 0; l < COLOR_COUNT; l++) 
+        str += GetOutput(l) + " ";
     return str;
 }
 
@@ -123,9 +93,9 @@ void Light::HandleStrobe() {
         Power(false);
         strobePeriodTimer.WaitForExpiration();
         strobeDurationTimer.Restart();
-        digitalWrite(binaryPin, HIGH);
+        digitalWrite(ledPins[4], HIGH);
         strobeDurationTimer.WaitForExpiration();
-        digitalWrite(binaryPin, LOW);
+        digitalWrite(ledPins[4], LOW);
         strobePeriodTimer.Continue();
     }
 }
@@ -223,8 +193,8 @@ void Light::SetColorAsDefault() {
 
 void Light::Flash(long us) {
     MicrosTimer timer;
-    digitalWrite(binaryPin, 1);
+    digitalWrite(ledPins[4], 1);
     timer.Start(us);
     timer.WaitForExpiration();
-    digitalWrite(binaryPin, 0);
+    digitalWrite(ledPins[4], 0);
 }
