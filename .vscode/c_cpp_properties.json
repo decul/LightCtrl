@@ -5,8 +5,6 @@
             "includePath": [
                 "C:\\Users\\Tomek\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**",
                 "C:\\Users\\Tomek\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.5.0\\**",
-                "C:\\BackedUp\\Arduino_apps\\libraries\\OneWire",
-                "C:\\BackedUp\\Arduino_apps\\libraries\\IRremote",
                 "C:\\BackedUp\\Arduino_apps\\libraries\\MillisTime",
                 "C:\\Program Files (x86)\\Arduino\\tools\\**",
                 "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**",
@@ -14,6 +12,9 @@
                 "${workspaceRoot}",
                 "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\variants\\standard",
                 "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\wiring_digital.c"
+            ],
+            "forcedInclude": [
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": false,
@@ -25,7 +26,12 @@
                 ]
             },
             "intelliSenseMode": "msvc-x64",
-            "forcedInclude": []
+            "compilerPath": "C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\bin\\avr-gcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "defines": [
+                "USBCON"
+            ]
         }
     ],
     "version": 4

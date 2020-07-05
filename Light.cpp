@@ -83,9 +83,9 @@ String Light::GetOutputs() {
 void Light::StartStrobe(float width, float frequency) {
     Power(false);
     strobeEnabled = true;
-    long strobePeriod = 1000000.0 / frequency;
+    float strobePeriod = 1000000.0 / frequency;
     strobePeriodTimer.Start(strobePeriod);
-    strobeDurationTimer.period = width * strobePeriod;
+    strobeDurationTimer.SetPeriod(width * strobePeriod);
 }
 
 void Light::HandleStrobe() {
@@ -192,9 +192,7 @@ void Light::SetColorAsDefault() {
 
 
 void Light::Flash(long us) {
-    MicrosTimer timer;
     digitalWrite(ledPins[4], 1);
-    timer.Start(us);
-    timer.WaitForExpiration();
+    MicrosTimer::Sleep(us);
     digitalWrite(ledPins[4], 0);
 }

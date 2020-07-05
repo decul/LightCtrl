@@ -4,9 +4,10 @@
 #include <MillisTime.h>
 #include "MyEEPROM.h"
 #include "SerialMsgr.h"
+#include "WiFiMsgr.h"
+
 
 MyEEPROM memory;
-
 
 Light light;
 Button button(A0);
@@ -17,17 +18,16 @@ void (*reset) (void) = 0;
 
 
 void setup() {
-    SerialMsgr::Initialize();
+    Serial.begin(115200);
+    WiFiMsgr::Initialize();
     light.ResetDimmer();
-    
 }
 
-
-
 void loop() {
-    light.HandleStrobe();
+    HandleWebRequests();
+    light.HandleStrobe();   
     light.HandleAutoDimming();
-
+    
     switch (button.GetAction()) {
         case Button::CLICK:
             light.Switch();
@@ -45,20 +45,28 @@ void loop() {
 
 
 
-String handleCommand(String input) {
-    const byte MAX_ARGS_LEN = 8;
-    String args[MAX_ARGS_LEN];
-    byte argsNo = 0;
-
-    String command = SerialMsgr::GetWord(input);
-
-    while (input.length() > 0) {
-        if (++argsNo >= MAX_ARGS_LEN) {
-            return "Too many arguments given";
-        }
-        args[argsNo - 1] = SerialMsgr::GetWord(input);
+void HandleWebRequests() {
+    WiFiMsgr::CheckConnection();
+    MyWiFiClient client = WiFiMsgr::Client();
+    if (client) {                             
+        String command = WiFiMsgr::ReadMsg(client);
+        String response = HandleCommand(command);
+        WiFiMsgr::SendResponse(client, response);
     }
+}
 
+void serialEvent() { 
+    String command = SerialMsgr::ReadMsg();
+    String response = HandleCommand(command);
+    Serial.println(response);
+}
+
+
+
+String HandleCommand(String input) {
+    String command;
+    String args[MAX_CMD_ARGS_LEN];
+    byte argsNo = SerialMsgr::SplitCommand(input, command, args);
 
     if (command == "on") {
         light.Power(true);
@@ -154,9 +162,18 @@ String handleCommand(String input) {
         man += "string time();\n";
         man += "void time(string isoTime);\n\n";
 
+        man += "string gui();\n\n";
+
         man += "string debug();\n\n";
 
         return man;
+    }
+
+    if (command == "" || command == "gui") {
+        return String("<body style='background: #151515;'>") +
+            "<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>" +
+            "<script type='text/javascript' src='https://decul.github.io/LightCtrl/scripts.js'></script>" +
+            "<script>loadSite()</script></body>";
     }
 
     else if (command == "debug") {

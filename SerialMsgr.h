@@ -1,12 +1,11 @@
 #pragma once
 #include <Arduino.h>
 
+#define MAX_CMD_ARGS_LEN 8
+
+
 class SerialMsgr {
 public:
-    static void Initialize() {
-        Serial.begin(115200);
-    }
-
     static String ReadMsg() {
         String msg = "";
 
@@ -45,16 +44,14 @@ public:
         return result;
     }
 
+    static byte SplitCommand(String input, String &cmd, String* args) {
+        byte argsNo = 0;
+        cmd = GetWord(input);
+
+        while (input.length() > 0 && argsNo < MAX_CMD_ARGS_LEN) 
+            args[argsNo++] = SerialMsgr::GetWord(input);
+
+        return argsNo;
+    }
+
 };
-
-
-
-
-String handleCommand(String cmd);
-
-void serialEvent() { 
-    String command = SerialMsgr::ReadMsg();
-    String response = handleCommand(command);
-    if (response.length() > 0)
-        Serial.println(response);
-}
