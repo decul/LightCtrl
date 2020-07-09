@@ -7,8 +7,6 @@
 
 class Light {
 private:
-    MyEEPROM memory;
-
     float lightColor[COLOR_COUNT];
     bool powerOn = false;
 
@@ -24,7 +22,7 @@ private:
     float dimmerInitColor[COLOR_COUNT];
 
 public:
-    const byte ledPins[COLOR_COUNT] = { 2, 6, 10, 11, 9 };
+    const byte ledPins[COLOR_COUNT] = { D1, D2, D3, D4, D5 };
     
     Light();
     

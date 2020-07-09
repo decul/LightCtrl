@@ -3,8 +3,8 @@
         {
             "name": "Win32",
             "includePath": [
+                "C:\\Users\\Tomek\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.7.1\\**",
                 "C:\\Users\\Tomek\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**",
-                "C:\\Users\\Tomek\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.5.0\\**",
                 "C:\\BackedUp\\Arduino_apps\\libraries\\MillisTime",
                 "C:\\Program Files (x86)\\Arduino\\tools\\**",
                 "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**",
@@ -13,9 +13,7 @@
                 "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\variants\\standard",
                 "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\wiring_digital.c"
             ],
-            "forcedInclude": [
-                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
-            ],
+            "forcedInclude": [],
             "browse": {
                 "limitSymbolsToIncludedHeaders": false,
                 "path": [

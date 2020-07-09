@@ -2,13 +2,12 @@
 #include <math.h>
 
 Light::Light() {
-	for (int l = 0; l < COLOR_COUNT; l++) 
+	for (byte l = 0; l < COLOR_COUNT; l++) 
         pinMode(ledPins[l], OUTPUT);
-    Power(memory.IsOnByDefault());
 }
 
 void Light::UpdateOutput() {
-    for (int l = 0; l < COLOR_COUNT; l++) 
+    for (byte l = 0; l < COLOR_COUNT; l++)
         analogWrite(ledPins[l], GetOutput(l));
 }
 
@@ -57,7 +56,6 @@ void Light::Power(bool on) {
     if (powerOn != on) {
         powerOn = on;
         UpdateOutput();
-        memory.SetOnByDefault(on);
     }
 }
     
@@ -134,7 +132,7 @@ void Light::HandleAutoDimming() {
 
 void Light::ResetDimmer() {
     for (int i = 0; i < COLOR_COUNT; i++) {
-        lightColor[i] = memory.GetDefaultColor(i);
+        lightColor[i] = MyEEPROM::GetDefaultColor(i);
         dimmerInitColor[i] = lightColor[i];
     }
     UpdateOutput();
@@ -143,14 +141,14 @@ void Light::ResetDimmer() {
     dimmerFinished = false;
     DateTime now = DateTime::Now();
 
-    Time dimEnd = memory.GetDefaultDimEndTime();
-    dimmerEndTime = DateTime::ClosestDate(now, dimEnd);
+    Time dimEnd = MyEEPROM::GetDefaultDimEndTime();
+    dimmerEndTime = now.ClosestDate(dimEnd);
 
     if (now.time() > dimEnd || now.Hour() < defDimmerResetHour)
         dimmerEndTime = now;
 
     dimmerStartTime = dimmerEndTime - TimeSpan(0, defDimmerSpan, 0, 0);
-    dimmerResetTime = DateTime::ClosestDate(now, Time(defDimmerResetHour));
+    dimmerResetTime = now.ClosestDate(Time(defDimmerResetHour));
 }
 
 void Light::EnableDimmer() {
@@ -186,7 +184,7 @@ void Light::UpdateDimmer() {
 
 void Light::SetColorAsDefault() {
     for (int i = 0; i < COLOR_COUNT; i++) 
-        memory.SetDefaultColor(i, lightColor[i]);
+        MyEEPROM::SetDefaultColor(i, lightColor[i]);
 }
 
 

@@ -6,6 +6,12 @@
 
 class SerialMsgr {
 public:
+    static void Initialize() {
+        Serial.begin(74880);
+        delay(100);
+        Serial.println();
+    }
+
     static String ReadMsg() {
         String msg = "";
 

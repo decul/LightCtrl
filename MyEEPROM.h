@@ -1,41 +1,43 @@
 #pragma once
 #include <EEPROM.h>
 
-// 1 byte variables
-#define onByDefaultAddr 0x100
-
-// Up to 4 bytes
-#define defaultDimEndAddr 0x400
-
-// Longer variables
-#define defaultColorAddr 0x800      //0x800 - 0x81f reserved
+#define defaultColorAddr      0 // - 19     20B
+#define defaultDimEndAddr    20 // - 21      2B
 
 class MyEEPROM {
 
 public:
-    float GetDefaultColor(int led) {
+    // commit 22 bytes of ESP8266 flash (for "EEPROM" emulation)
+    // this step actually loads the content (22 bytes) of flash into 
+    // a 22-byte-array cache in RAM
+    //
+    // EEPROM.commit() writes the content of byte-array cache to
+    // hardware flash.  flash write occurs if and only if one or more byte
+    // in byte-array cache has been changed, but if so, ALL 22 bytes are 
+    // written to flash
+    static void Initialize() {
+        EEPROM.begin(22);
+    }
+
+    static float GetDefaultColor(int led) {
         float value;
         EEPROM.get(defaultColorAddr + led * 4, value);
         return value;
     }
-    void SetDefaultColor(int led, float value) {
-        if (led < 8 && value != GetDefaultColor(led))
+    static void SetDefaultColor(int led, float value) {
+        if (led < 5)
             EEPROM.put(defaultColorAddr + led * 4, value);
+        EEPROM.commit();
     }
 
-    Time GetDefaultDimEndTime() {
-        Time time;
-        EEPROM.get(defaultDimEndAddr, time);
-        return time;
+    static Time GetDefaultDimEndTime() {
+        byte h = EEPROM.read(defaultDimEndAddr);
+        byte m = EEPROM.read(defaultDimEndAddr + 1);
+        return Time(h, m);
     }
-    void SetDefaultDimEndTime(Time time) {
-        EEPROM.put(defaultDimEndAddr, time);
-    }
-
-    bool IsOnByDefault() {
-        return EEPROM.read(onByDefaultAddr);
-    }
-    void SetOnByDefault(bool value) {
-        EEPROM.write(onByDefaultAddr, value);
+    static void SetDefaultDimEndTime(Time time) {
+        EEPROM.write(defaultDimEndAddr, time.Hour());
+        EEPROM.write(defaultDimEndAddr + 1, time.Min());
+        EEPROM.commit();
     }
 };

@@ -6,27 +6,41 @@
 #include "SerialMsgr.h"
 #include "WiFiMsgr.h"
 
+#define LED_HIGH 0
+#define LED_LOW  1
+#define LED_ESP  D4 // GPIO2
+#define LED_NODE D0 // GPIO16
 
-MyEEPROM memory;
+#define DATE_UPDATE_HOUR 5
+
 
 Light light;
 Button button(A0);
 
-
-//declare reset function @ address 0
-void (*reset) (void) = 0; 
+bool ledOff = 1;
+MillisTimer ledTimer(0);
+MillisTimer dateUpdateTimer(0);
+byte dateUpdateFailCount = 0;
 
 
 void setup() {
-    Serial.begin(115200);
+    pinMode(LED_ESP, OUTPUT);
+
+    SerialMsgr::Initialize();
     WiFiMsgr::Initialize();
+    MyEEPROM::Initialize();
+
     light.ResetDimmer();
 }
 
 void loop() {
-    HandleWebRequests();
-    light.HandleStrobe();   
+    WiFiMsgr::CheckConnection();
+    CheckSerialMsgs();
+    CheckWebRequests();
+    CheckDateUpdate();
+    light.HandleStrobe();  
     light.HandleAutoDimming();
+    CheckLED();
     
     switch (button.GetAction()) {
         case Button::CLICK:
@@ -45,20 +59,78 @@ void loop() {
 
 
 
-void HandleWebRequests() {
-    WiFiMsgr::CheckConnection();
-    MyWiFiClient client = WiFiMsgr::Client();
-    if (client) {                             
+void CheckWebRequests() {
+    WiFiClient client = WiFiMsgr::Client();
+    if (client) {              
         String command = WiFiMsgr::ReadMsg(client);
         String response = HandleCommand(command);
         WiFiMsgr::SendResponse(client, response);
     }
 }
 
-void serialEvent() { 
-    String command = SerialMsgr::ReadMsg();
-    String response = HandleCommand(command);
-    Serial.println(response);
+void CheckSerialMsgs() { 
+    if (Serial.available()) {
+        String command = SerialMsgr::ReadMsg();
+        String response = HandleCommand(command);
+        Serial.println(response);
+    }
+}
+
+void CheckLED() {
+    if (ledTimer.HasExpired()) {
+        digitalWrite(LED_ESP, ledOff = !ledOff);
+        if (!WiFiMsgr::IsConnected()) 
+            ledTimer.AddTime(500);
+        else if (Logger::AnyNewErrors()) 
+            ledTimer.AddTime(ledOff ? 1950 : 50);
+        else 
+            ledTimer.AddTime(ledOff ? 999 : 1);
+    }
+}
+
+static bool UpdateDate(bool retry = false) {
+    HTTPClient http;
+    http.begin("http://worldtimeapi.org/api/timezone/Europe/Warsaw.txt");
+    int code = http.GET();
+    if (code == 200) {
+        String response = http.getString();
+        response.remove(0, response.indexOf("datetime: ") + 10);
+        response.remove(response.indexOf("+"));
+        DateTime date = DateTime::FromISO(response);
+        if (date.UnixTime() != 0) {
+            if (!DateTime::IsSet())
+                Serial.println("Date Updated");
+            DateTime::Set(date);
+            dateUpdateFailCount = 0;
+            dateUpdateTimer.Start(Time(DATE_UPDATE_HOUR));
+            return true;
+        }
+        else {
+            Logger::Info("Date Update Failed: Parse Error");
+        }
+    }
+    else {
+        Logger::Info("Date Update Failed: " + String(code));
+    }
+
+    dateUpdateTimer.Start(Time(DATE_UPDATE_HOUR));
+    if (retry) {
+        if (++dateUpdateFailCount < 5) {
+            dateUpdateTimer.Start(5000);
+        }
+        else {
+            Logger::Error("Date Update Failed");
+            dateUpdateFailCount = 0;
+        }
+    }
+
+    return false;
+}
+
+static void CheckDateUpdate() {
+    if (dateUpdateTimer.HasExpired() && WiFiMsgr::IsConnected()) {
+        UpdateDate(true);
+    }
 }
 
 
@@ -100,9 +172,9 @@ String HandleCommand(String input) {
         else if (args[0] == "setdefcol")
             light.SetColorAsDefault();
         else if (args[0] == "gettime")
-            return memory.GetDefaultDimEndTime().ToString();
+            return MyEEPROM::GetDefaultDimEndTime().ToString();
         else if (args[0] == "settime" && argsNo == 2)
-            memory.SetDefaultDimEndTime(Time::FromString(args[1]));
+            MyEEPROM::SetDefaultDimEndTime(Time::FromString(args[1]));
         else 
             return "Invalid arguments";
     }
@@ -124,17 +196,15 @@ String HandleCommand(String input) {
     }
 
     else if (command == "reset") {
-        for (int i = 0; i < 2; i++)
-            Serial.println("=== Software Reset ===");
-        delay(50);
-        reset();
+        //Serial.println("=== Software Reset ===");
+        while (true);
     }
 
     else if (command == "time") {
         if (argsNo == 0)
             return DateTime::Now().ToISO();
         else if (DateTime::FromISO(args[0]).UnixTime() != 0)
-            DateTime::Adjust(DateTime::FromISO(args[0]));
+            DateTime::Set(DateTime::FromISO(args[0]));
     }
 
     else if (command == "?" || command == "help") {
@@ -162,22 +232,43 @@ String HandleCommand(String input) {
         man += "string time();\n";
         man += "void time(string isoTime);\n\n";
 
+        man += "string wifi();\n";
+        man += "> void rssi();\n\n";
+
         man += "string gui();\n\n";
 
-        man += "string debug();\n\n";
+        man += "string log([e/i/d/c/ ]);\n\n";
 
         return man;
     }
 
-    if (command == "" || command == "gui") {
+    else if (command == "wifi") {
+        return "Status: " + WiFiMsgr::Status() + 
+            "\nSignal: " + WiFiMsgr::RSSI() +
+            "\nIP: " + WiFi.localIP().toString() + 
+            "\nMAC: " + WiFi.macAddress();
+    }
+
+    else if (command == "rssi") {
+        WiFiMsgr::displayRssi = !WiFiMsgr::displayRssi;
+    }
+
+    else if (command == "" || command == "gui") {
         return String("<body style='background: #151515;'>") +
             "<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>" +
             "<script type='text/javascript' src='https://decul.github.io/LightCtrl/scripts.js'></script>" +
             "<script>loadSite()</script></body>";
     }
 
-    else if (command == "debug") {
-        return "Debug data not available";
+    else if (command == "log") {
+        if (argsNo == 0)
+            return Logger::Read();
+        else if (args[0] == "c")
+            return Logger::Read('D', true);
+        else if (args[0].length() == 0)
+            return Logger::Read(args[0][0]);
+        else 
+            return "Invalid arguments";
     }
 
     else {
