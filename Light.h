@@ -13,6 +13,7 @@ private:
     bool strobeEnabled = false;
     MicrosTimer strobePeriodTimer;
     MicrosTimer strobeDurationTimer;
+    MicrosTimer dimmerTimer = MicrosTimer(0);
 
     DateTime dimmerResetTime;
     DateTime dimmerStartTime;
@@ -22,13 +23,13 @@ private:
     float dimmerInitColor[COLOR_COUNT];
 
 public:
-    const byte ledPins[COLOR_COUNT] = { D1, D2, D3, D4, D5 };
+    const byte ledPins[COLOR_COUNT] = { D6, D7, D8, D2, D1 };
     
     Light();
     
     void UpdateOutput();
 
-    void AdjustColor(int index, double value);
+    void AdjustColor(int index, float value);
     void SetColor(int index, float value);
     void SetColors(float* color, int count = COLOR_COUNT);
     void SetColors(String* rgbwy);
@@ -37,7 +38,7 @@ public:
     String GetColors();
 
     String GetOutputs();
-    byte GetOutput(int l);
+    uint16_t GetOutput(int l);
 
     void Power(bool on);
     void Switch();

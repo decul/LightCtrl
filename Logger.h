@@ -1,24 +1,77 @@
+#pragma once
 #include <MillisTime.h>
+#include "AnyStream.h"
 
-#define LOG_MAX_LENGTH 10000
+#define LOG_MAX_LENGTH 8192
 
 class Logger {
 private:
-    static String data;
+    static char data[];
+    static int16_t writeIndex;
+    static int16_t readIndex;
     static bool newErrors;
+    static bool overflowed;
 
-    static void Append(String str, char type) {
+    static void AppendLine(const String &str, const char &type) {
         Serial.println(str);
-        String line = String("    ") + type + str + "\n";
-        uint32_t unix = DateTime::Now().UnixTime();
-        for (int i = 0; i < 4; i++)
-            line[i] = (unix >> (i * 8)) & 0xFF;
-        //data += line;
-        while (data.length() > 10000)
-            data.remove(0, data.indexOf('\n') + 1);
+        Write4(DateTime::Now().UnixTime());
+        Write(type);
+        Put(str + "\n");
     }
 
-    static byte Lvl(char type) {
+    inline static void Write(const uint8_t &byte) {
+        data[writeIndex] = byte;
+        if (++writeIndex >= LOG_MAX_LENGTH) {
+            writeIndex = 0;
+            overflowed = true;
+        }
+    }
+
+    inline static void Write4(const uint32_t &value) {
+        for (int i = 0; i < 4; i++) 
+            Write((value >> (i * 8)) & 0xFF);
+    }
+
+    static void Put(const String &str) {
+        for (int i = 0; i < str.length(); i++) 
+            Write(str[i]);
+    }
+
+    static void FindReadIndex() {
+        if (overflowed) {
+            readIndex = writeIndex;
+            FindNewLineIndex();
+        }
+        else {
+            readIndex = 0;
+        }
+    }
+
+    static void FindNewLineIndex() {
+        do {
+            if (Read() == '\n') {
+                // Index is now set on next character after '\n'
+                return;
+            }
+        } while (readIndex != writeIndex);
+        // ReadIndex is now equal to writeIndex
+    }
+
+    inline static uint8_t Read() {
+        uint8_t value = data[readIndex];
+        if (++readIndex >= LOG_MAX_LENGTH) 
+            readIndex = 0;
+        return value;
+    }
+
+    static uint32_t Read4() {
+        uint32_t value = 0;
+        for (int i = 0; i < 4; i++) 
+            value = value | (Read() << (i * 8));
+        return value;
+    }
+
+    static byte Lvl(const char &type) {
         switch (toupper(type)) {
             case 'D':   return 3;
             case 'I':   return 2;
@@ -27,60 +80,65 @@ private:
         } 
     }
 
+    static void PrintTimeStampTo(AnyStream &stream, const DateTime &timeStamp, const DateTime &today) {
+        if (timeStamp >= today)
+            stream.Print(timeStamp.time().ToString());
+        else 
+            stream.Print(timeStamp.ToISO());
+    }
+
 public:
-    static void Info(String str) {
-        Append(str, 'I');
+    static void Info(const String &str) {
+        AppendLine(str, 'I');
     }
 
-    static void Debug(String str) {
-        Append(str, 'D');
+    static void Debug(const String &str) {
+        AppendLine(str, 'D');
     }
 
-    static void Error(String str) {
-        Append(str, 'E');
+    static void Error(const String &str) {
+        AppendLine(str, 'E');
         newErrors = true;
     }
 
-    static String Read(char type = 'D', bool clear = false) {
+    static void PrintTo(AnyStream &stream, const char &type = 'D', const bool &clear = false) {
         byte requestedLvl = Lvl(type);
         DateTime today = DateTime::Now().Day();
-        String result = "";
+        char c;
 
-        int index = 0;
-        while (index < data.length()) {
-            byte lvl = Lvl(data[index + 4]);
-            if (lvl > requestedLvl) {
-                index = data.indexOf("\n", index) + 1;
+        stream.Print("Boot time: ");
+        PrintTimeStampTo(stream, DateTime::LastResetDate(), today);
+        stream.Println();
+
+        FindReadIndex();
+        while (readIndex != writeIndex) {
+            uint32_t unix = Read4();
+            char type = Read();
+            if (Lvl(type) > requestedLvl) {
+                FindNewLineIndex();
             }
             else {
-                uint32_t unix = 0;
-                for (int i = 0; i < 4; i++) 
-                    unix = unix | ((uint32_t)data[index++] << (i * 8));
                 DateTime timeStamp(unix);
-                if (timeStamp >= today)
-                    result += timeStamp.time().ToString();
-                else 
-                    result += timeStamp.ToISO();
-
-                result += String(" ") + data[index++] + ": ";
-
-                int splIndex = data.indexOf("\n", index);
-                if (splIndex < 0)
-                    splIndex = data.length();
-
-                result += data.substring(index, splIndex) + "\n";
-                index = splIndex + 1;
+                PrintTimeStampTo(stream, timeStamp, today);
+                stream.Print(String(" ") + type + ": ");
+                
+                do {
+                    c = Read();
+                    stream.Print(c);
+                } while (c != '\n');
             }
+            ESP.wdtFeed();
         }
 
+        if (stream.IsNew())
+            stream.Print("Nothing to show");
+        stream.Close();
+
         newErrors = false;
-        if (clear)
-            data.remove(0);
-
-        if (result.length() == 0)
-            result += "Nothing to show";
-
-        return result;
+        if (clear) {
+            writeIndex = 0;
+            overflowed = false;
+        }
     }
 
     static bool AnyNewErrors() {
@@ -89,5 +147,8 @@ public:
 
 };
 
-String Logger::data = "";
+int16_t Logger::writeIndex = 0;
+int16_t Logger::readIndex = 0;
 bool Logger::newErrors = false;
+bool Logger::overflowed = false;
+char Logger::data[LOG_MAX_LENGTH];

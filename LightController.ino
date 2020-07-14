@@ -5,22 +5,27 @@
 #include "MyEEPROM.h"
 #include "SerialMsgr.h"
 #include "WiFiMsgr.h"
+#include "AnyStream.h"
 
+#define k * 1000
 #define LED_HIGH 0
 #define LED_LOW  1
-#define LED_ESP  D4 // GPIO2
+#define LED_ESP  D0 // D4 // GPIO2
 #define LED_NODE D0 // GPIO16
 
 #define DATE_UPDATE_HOUR 5
 
 
 Light light;
-Button button(A0);
+Button button(D4);
+AnyStream serialStream;
 
 bool ledOff = 1;
-MillisTimer ledTimer(0);
+byte ledCounter = 0;
+MicrosTimer ledTimer(0);
 MillisTimer dateUpdateTimer(0);
 byte dateUpdateFailCount = 0;
+DateTime bootTime;
 
 
 void setup() {
@@ -39,7 +44,7 @@ void loop() {
     CheckWebRequests();
     CheckDateUpdate();
     light.HandleStrobe();  
-    light.HandleAutoDimming();
+    //light.HandleAutoDimming();
     CheckLED();
     
     switch (button.GetAction()) {
@@ -61,18 +66,23 @@ void loop() {
 
 void CheckWebRequests() {
     WiFiClient client = WiFiMsgr::Client();
-    if (client) {              
+    if (client) {      
         String command = WiFiMsgr::ReadMsg(client);
-        String response = HandleCommand(command);
-        WiFiMsgr::SendResponse(client, response);
+        AnyStream stream(client);
+        String response = HandleCommand(command, stream);
+        if (stream.IsNew())
+            stream.Print(response);
+        stream.Close();
     }
 }
 
 void CheckSerialMsgs() { 
     if (Serial.available()) {
         String command = SerialMsgr::ReadMsg();
-        String response = HandleCommand(command);
-        Serial.println(response);
+        String response = HandleCommand(command, serialStream);
+        if (serialStream.IsNew())
+            serialStream.Println(response);
+        serialStream.Restart();
     }
 }
 
@@ -80,11 +90,15 @@ void CheckLED() {
     if (ledTimer.HasExpired()) {
         digitalWrite(LED_ESP, ledOff = !ledOff);
         if (!WiFiMsgr::IsConnected()) 
-            ledTimer.AddTime(500);
-        else if (Logger::AnyNewErrors()) 
-            ledTimer.AddTime(ledOff ? 1950 : 50);
-        else 
-            ledTimer.AddTime(ledOff ? 999 : 1);
+            ledTimer.AddTime(500 k);
+        else if (Logger::AnyNewErrors())
+            ledTimer.AddTime(ledOff && (++ledCounter & 1) ? 1850 k : 50 k);
+        else
+            ledTimer.AddTime(ledOff ? 999900 : 100);
+
+        // if (!digitalRead(LED_ESP))
+        //     digitalWrite(LED_ESP, LED_LOW);
+        // ledTimer.AddTime(1000 k);
     }
 }
 
@@ -98,9 +112,12 @@ static bool UpdateDate(bool retry = false) {
         response.remove(response.indexOf("+"));
         DateTime date = DateTime::FromISO(response);
         if (date.UnixTime() != 0) {
-            if (!DateTime::IsSet())
-                Serial.println("Date Updated");
+            bool firstUpdate = !DateTime::IsSet();
             DateTime::Set(date);
+            if (firstUpdate) {
+                Serial.println("Date Updated");
+                bootTime = DateTime::LastResetDate();
+            }
             dateUpdateFailCount = 0;
             dateUpdateTimer.Start(Time(DATE_UPDATE_HOUR));
             return true;
@@ -135,7 +152,7 @@ static void CheckDateUpdate() {
 
 
 
-String HandleCommand(String input) {
+String HandleCommand(String input, AnyStream &stream) {
     String command;
     String args[MAX_CMD_ARGS_LEN];
     byte argsNo = SerialMsgr::SplitCommand(input, command, args);
@@ -158,13 +175,20 @@ String HandleCommand(String input) {
             case 1:     return String(light.GetColor(args[0].toInt()));
             case 2:     light.SetColor(args[0].toInt(), args[1].toFloat());     break;
             case 5:     light.SetColors(args);                                  break;
-            default:    return "Wrong number of arguments";
+            default:    stream.Respond("Wrong number of arguments", 400);       break;
         } 
+    }
+
+    else if (command == "output") {
+        if (argsNo == 1) 
+            analogWrite(D1, args[0].toInt());
+        else 
+            stream.Respond("Wrong number of arguments", 400);
     }
 
     else if (command == "dimmer") {
         if (argsNo == 0)
-            return "No arguments given";
+            stream.Respond("No arguments given", 400);
         else if (args[0] == "on")
             light.EnableDimmer();
         else if (args[0] == "off")
@@ -176,7 +200,7 @@ String HandleCommand(String input) {
         else if (args[0] == "settime" && argsNo == 2)
             MyEEPROM::SetDefaultDimEndTime(Time::FromString(args[1]));
         else 
-            return "Invalid arguments";
+            stream.Respond("Invalid arguments", 400);
     }
 
     else if (command == "strobe") {
@@ -185,18 +209,18 @@ String HandleCommand(String input) {
         else if (argsNo == 2)
             light.StartStrobe(args[0].toFloat(), args[1].toFloat());
         else 
-            return "Wrong number of arguments";
+            stream.Respond("Wrong number of arguments", 400);
     }
 
     else if (command == "flash") {
         if (argsNo == 0)
-            return "No arguments given";
+            stream.Respond("No arguments given", 400);
         else 
             light.Flash(args[0].toInt());
     }
 
     else if (command == "reset") {
-        //Serial.println("=== Software Reset ===");
+        stream.Respond("=== Software Reset ===");
         while (true);
     }
 
@@ -208,45 +232,40 @@ String HandleCommand(String input) {
     }
 
     else if (command == "?" || command == "help") {
-        String man = "";
+        stream.Println("void on();");
+        stream.Println("void off();");
+        stream.Println("void switch();\n");
 
-        man += "void on();\n";
-        man += "void off();\n";
-        man += "void switch();\n\n";
+        stream.Println("string color();");
+        stream.Println("float color(int led);");
+        stream.Println("void color(int led, float value);");
+        stream.Println("void color(float col[5]);\n");
 
-        man += "string color();\n";
-        man += "float color(int led);\n";
-        man += "void color(int led, float value);\n";
-        man += "void color(float col[5]);\n\n";
+        stream.Println("void dimmer([on/off/setdefcol/gettime]);");
+        stream.Println("void dimmer([settime], string iso);\n");
 
-        man += "void dimmer([on/off/setdefcol/gettime]);\n";
-        man += "void dimmer([settime], string iso);\n\n";
+        stream.Println("void strobe(float width, float freq);");
+        stream.Println("void strobe();");
+        stream.Println("void flash(int micros);\n");
 
-        man += "void strobe(float width, float freq);\n";
-        man += "void strobe();\n\n";
+        stream.Println("void reset();\n");
 
-        man += "void flash(int micros);\n\n";
+        stream.Println("string time();");
+        stream.Println("void time(string isoTime);\n");
 
-        man += "void reset();\n\n";
+        stream.Println("string wifi();");
+        stream.Println("> void rssi();\n");
 
-        man += "string time();\n";
-        man += "void time(string isoTime);\n\n";
+        stream.Println("string gui();\n");
 
-        man += "string wifi();\n";
-        man += "> void rssi();\n\n";
-
-        man += "string gui();\n\n";
-
-        man += "string log([e/i/d/c/ ]);\n\n";
-
-        return man;
+        stream.Println("string log([e/i/d/c/ ]);\n");
     }
 
     else if (command == "wifi") {
-        return "Status: " + WiFiMsgr::Status() + 
-            "\nSignal: " + WiFiMsgr::RSSI() +
-            "\nIP: " + WiFi.localIP().toString() + 
-            "\nMAC: " + WiFi.macAddress();
+        stream.Println("Status: " + WiFiMsgr::Status());
+        stream.Println("Signal: " + WiFiMsgr::RSSI());
+        stream.Println("IP: " + WiFi.localIP().toString());
+        stream.Println("MAC: " + WiFi.macAddress());
     }
 
     else if (command == "rssi") {
@@ -254,25 +273,25 @@ String HandleCommand(String input) {
     }
 
     else if (command == "" || command == "gui") {
-        return String("<body style='background: #151515;'>") +
-            "<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>" +
-            "<script type='text/javascript' src='https://decul.github.io/LightCtrl/scripts.js'></script>" +
-            "<script>loadSite()</script></body>";
+        stream.Println("<body style='background: #151515;'>");
+        stream.Println("<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>");
+        stream.Println("<script type='text/javascript' src='https://decul.github.io/LightCtrl/scripts.js'></script>");
+        stream.Println("<script>loadSite()</script></body>");
     }
 
     else if (command == "log") {
         if (argsNo == 0)
-            return Logger::Read();
+            Logger::PrintTo(stream);
         else if (args[0] == "c")
-            return Logger::Read('D', true);
-        else if (args[0].length() == 0)
-            return Logger::Read(args[0][0]);
+            Logger::PrintTo(stream, 'D', true);
+        else if (args[0].length() == 1)
+            Logger::PrintTo(stream, args[0][0]);
         else 
-            return "Invalid arguments";
+            stream.Respond("Invalid arguments", 400);
     }
 
     else {
-        return String("Unrecognized command: '") + command + "'";
+        stream.Respond("Unrecognized command: '" + command + "'", 400);
     }
 
     return "OK";

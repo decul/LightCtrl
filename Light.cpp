@@ -2,19 +2,19 @@
 #include <math.h>
 
 Light::Light() {
-	for (byte l = 0; l < COLOR_COUNT; l++) 
+	for (byte l = 0; l < COLOR_COUNT; l++)
         pinMode(ledPins[l], OUTPUT);
 }
 
 void Light::UpdateOutput() {
-    for (byte l = 0; l < COLOR_COUNT; l++)
+    for (byte l = 0; l < COLOR_COUNT; l++) 
         analogWrite(ledPins[l], GetOutput(l));
 }
 
 
-void Light::AdjustColor(int index, double difference) {
+void Light::AdjustColor(int index, float difference) {
     Power(true);
-    lightColor[index] += max(0.0, min(1.0, lightColor[index] + difference));
+    lightColor[index] += max(0.0f, min(1.0f, lightColor[index] + difference));
     UpdateOutput();
     UpdateDimmer();
 }
@@ -63,11 +63,11 @@ void Light::Switch() {
     Power(!powerOn);
 }
 
-byte Light::GetOutput(int l) {
+uint16_t Light::GetOutput(int l) {
     if (!powerOn || lightColor[l] == 0.0) 
         return 0;
     else 
-        return pow(255, lightColor[l]);
+        return pow(PWMRANGE, lightColor[l]);
 }
 
 String Light::GetOutputs() {
@@ -108,25 +108,29 @@ void Light::StopStrobe() {
 #define dimmerMinPeriod 30
 
 void Light::HandleAutoDimming() {
-    DateTime now = DateTime::Now();
+    if (DateTime::IsSet() && dimmerTimer.HasExpired()) {
+        DateTime now = DateTime::Now();
     
-    // Reset dimmer once a day
-    if (now > dimmerResetTime && !powerOn) {
-        ResetDimmer();
-    }
+        // Reset dimmer once a day
+        if (now > dimmerResetTime && !powerOn) {
+            ResetDimmer();
+        }
 
-    // Dim light if that's right time
-    if (!dimmerDisabled && !dimmerFinished && now > dimmerStartTime) {
-        TimeSpan dimmerSpan = dimmerEndTime - dimmerStartTime;
-        TimeSpan timeRemaining = dimmerEndTime - now;
-        float percent = max(0.0f, (float)timeRemaining.TotalSeconds() / dimmerSpan.TotalSeconds());
+        // Dim light if that's right time
+        if (!dimmerDisabled && !dimmerFinished && now > dimmerStartTime) {
+            TimeSpan dimmerSpan = dimmerEndTime - dimmerStartTime;
+            TimeSpan timeRemaining = dimmerEndTime - now;
+            float percent = max(0.0f, (float)timeRemaining.TotalSeconds() / dimmerSpan.TotalSeconds());
 
-        for (int i = 2; i < COLOR_COUNT; i++) 
-            lightColor[i] = percent * dimmerInitColor[i];
-        UpdateOutput();
+            for (int i = 2; i < COLOR_COUNT; i++) 
+                lightColor[i] = percent * dimmerInitColor[i];
+            UpdateOutput();
 
-        if (now > dimmerEndTime) 
-            dimmerFinished = true;
+            if (now > dimmerEndTime) 
+                dimmerFinished = true;
+        }
+
+        dimmerTimer.Start(10000);
     }
 }
 
