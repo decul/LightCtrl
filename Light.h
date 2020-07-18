@@ -10,7 +10,8 @@ private:
     float lightColor[COLOR_COUNT];
     bool powerOn = false;
 
-    bool strobeEnabled = false;
+    byte strobeMode = 0;
+    byte strobeColor = 0;
     MicrosTimer strobePeriodTimer;
     MicrosTimer strobeDurationTimer;
     MicrosTimer dimmerTimer = MicrosTimer(0);
@@ -29,21 +30,23 @@ public:
     
     void UpdateOutput();
 
-    void AdjustColor(int index, float value);
-    void SetColor(int index, float value);
-    void SetColors(float* color, int count = COLOR_COUNT);
+    void AdjustColor(byte index, float value);
+    void SetColor(byte index, float value);
+    void SetColors(float* color, byte count = COLOR_COUNT);
     void SetColors(String* rgbwy);
 
-    float GetColor(int index);
+    float GetColor(byte index);
     String GetColors();
 
     String GetOutputs();
-    uint16_t GetOutput(int l);
+    uint16_t GetOutput(byte l);
+    uint16_t SetOutput(byte index, uint16_t value);
 
     void Power(bool on);
     void Switch();
 
     void StartStrobe(float width, float frequency);
+    void StartRGBStrobe(float frequency);
     void HandleStrobe();
     void StopStrobe();
 

@@ -12,7 +12,7 @@ void Light::UpdateOutput() {
 }
 
 
-void Light::AdjustColor(int index, float difference) {
+void Light::AdjustColor(byte index, float difference) {
     Power(true);
     lightColor[index] += max(0.0f, min(1.0f, lightColor[index] + difference));
     UpdateOutput();
@@ -20,33 +20,33 @@ void Light::AdjustColor(int index, float difference) {
 }
 
 
-void Light::SetColor(int index, float value) {
+void Light::SetColor(byte index, float value) {
     lightColor[index] = max(0.0f, min(1.0f, value));
     UpdateOutput();
     UpdateDimmer();
 }
 
-void Light::SetColors(float* rgbwy, int count) {
-    for (int l = 0; l < count; l++)
+void Light::SetColors(float* rgbwy, byte count) {
+    for (byte l = 0; l < count; l++)
         lightColor[l] = max(0.0f, min(1.0f, rgbwy[l]));
     UpdateOutput();
     UpdateDimmer();
 }
 
 void Light::SetColors(String* rgbwy) {
-    for (int l = 0; l < COLOR_COUNT; l++)
+    for (byte l = 0; l < COLOR_COUNT; l++)
         lightColor[l] = max(0.0f, min(1.0f, rgbwy[l].toFloat()));
     UpdateOutput();
     UpdateDimmer();
 }
 
-float Light::GetColor(int index) {
+float Light::GetColor(byte index) {
     return lightColor[index];
 }
 
 String Light::GetColors() {
     String str = "";
-    for (int l = 0; l < COLOR_COUNT; l++) 
+    for (byte l = 0; l < COLOR_COUNT; l++) 
         str += String(lightColor[l]) + " ";
     return str;
 }
@@ -63,7 +63,7 @@ void Light::Switch() {
     Power(!powerOn);
 }
 
-uint16_t Light::GetOutput(int l) {
+uint16_t Light::GetOutput(byte l) {
     if (!powerOn || lightColor[l] == 0.0) 
         return 0;
     else 
@@ -72,22 +72,44 @@ uint16_t Light::GetOutput(int l) {
 
 String Light::GetOutputs() {
     String str = "";
-    for (int l = 0; l < COLOR_COUNT; l++) 
-        str += GetOutput(l) + " ";
+    for (byte l = 0; l < COLOR_COUNT; l++) 
+        str += String(GetOutput(l)) + " ";
     return str;
+}
+
+uint16_t Light::SetOutput(byte index, uint16_t value) {
+    lightColor[index] = log(value) / log(PWMRANGE) + 0.00001;
+    UpdateOutput();
+    return GetOutput(index);
 }
 
 
 void Light::StartStrobe(float width, float frequency) {
     Power(false);
-    strobeEnabled = true;
+    strobeMode = 1;
     float strobePeriod = 1000000.0 / frequency;
     strobePeriodTimer.Start(strobePeriod);
     strobeDurationTimer.SetPeriod(width * strobePeriod);
 }
 
+void Light::StartRGBStrobe(float frequency) {
+    Power(false);
+    strobeMode = 2;
+    float strobePeriod = 1000000.0 / frequency;
+    strobePeriodTimer.Start(strobePeriod);
+}
+
 void Light::HandleStrobe() {
-    if (strobeEnabled) {
+    if (strobeMode == 2) {
+        Power(false);
+        strobePeriodTimer.WaitForExpiration();
+        digitalWrite(ledPins[strobeColor], LOW);
+        if (++strobeColor > 2)
+            strobeColor = 0;
+        digitalWrite(ledPins[strobeColor], HIGH);
+        strobePeriodTimer.Continue();
+    }
+    else if (strobeMode == 1) {
         Power(false);
         strobePeriodTimer.WaitForExpiration();
         strobeDurationTimer.Restart();
@@ -100,7 +122,7 @@ void Light::HandleStrobe() {
 
 void Light::StopStrobe() {
     Power(true);
-    strobeEnabled = false;
+    strobeMode = 0;
 }
 
 #define defDimmerSpan 2
@@ -122,7 +144,7 @@ void Light::HandleAutoDimming() {
             TimeSpan timeRemaining = dimmerEndTime - now;
             float percent = max(0.0f, (float)timeRemaining.TotalSeconds() / dimmerSpan.TotalSeconds());
 
-            for (int i = 2; i < COLOR_COUNT; i++) 
+            for (byte i = 2; i < COLOR_COUNT; i++) 
                 lightColor[i] = percent * dimmerInitColor[i];
             UpdateOutput();
 
@@ -135,7 +157,7 @@ void Light::HandleAutoDimming() {
 }
 
 void Light::ResetDimmer() {
-    for (int i = 0; i < COLOR_COUNT; i++) {
+    for (byte i = 0; i < COLOR_COUNT; i++) {
         lightColor[i] = MyEEPROM::GetDefaultColor(i);
         dimmerInitColor[i] = lightColor[i];
     }
@@ -170,7 +192,7 @@ void Light::UpdateDimmer() {
         return;
     }
 
-    for (int i = 0; i < COLOR_COUNT; i++) 
+    for (byte i = 0; i < COLOR_COUNT; i++) 
         dimmerInitColor[i] = lightColor[i];
     dimmerFinished = false;
 
@@ -187,7 +209,7 @@ void Light::UpdateDimmer() {
 }
 
 void Light::SetColorAsDefault() {
-    for (int i = 0; i < COLOR_COUNT; i++) 
+    for (byte i = 0; i < COLOR_COUNT; i++) 
         MyEEPROM::SetDefaultColor(i, lightColor[i]);
 }
 

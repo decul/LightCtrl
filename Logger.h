@@ -28,7 +28,7 @@ private:
     }
 
     inline static void Write4(const uint32_t &value) {
-        for (int i = 0; i < 4; i++) 
+        for (byte i = 0; i < 4; i++) 
             Write((value >> (i * 8)) & 0xFF);
     }
 
@@ -66,7 +66,7 @@ private:
 
     static uint32_t Read4() {
         uint32_t value = 0;
-        for (int i = 0; i < 4; i++) 
+        for (byte i = 0; i < 4; i++) 
             value = value | (Read() << (i * 8));
         return value;
     }

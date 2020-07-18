@@ -19,12 +19,12 @@ public:
         EEPROM.begin(22);
     }
 
-    static float GetDefaultColor(int led) {
+    static float GetDefaultColor(byte led) {
         float value;
         EEPROM.get(defaultColorAddr + led * 4, value);
         return value;
     }
-    static void SetDefaultColor(int led, float value) {
+    static void SetDefaultColor(byte led, float value) {
         if (led < 5)
             EEPROM.put(defaultColorAddr + led * 4, value);
         EEPROM.commit();

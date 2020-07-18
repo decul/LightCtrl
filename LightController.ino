@@ -17,7 +17,7 @@
 
 
 Light light;
-Button button(D4);
+Button button(D3);
 AnyStream serialStream;
 
 bool ledOff = 1;
@@ -180,10 +180,12 @@ String HandleCommand(String input, AnyStream &stream) {
     }
 
     else if (command == "output") {
-        if (argsNo == 1) 
-            analogWrite(D1, args[0].toInt());
-        else 
-            stream.Respond("Wrong number of arguments", 400);
+        switch (argsNo) {
+            case 0:     return light.GetOutputs();
+            case 1:     return String(light.GetOutput(args[0].toInt()));
+            case 2:     return String(light.SetOutput(args[0].toInt(), args[1].toInt()));
+            default:    stream.Respond("Too many arguments", 400);              break;
+        } 
     }
 
     else if (command == "dimmer") {
@@ -204,12 +206,12 @@ String HandleCommand(String input, AnyStream &stream) {
     }
 
     else if (command == "strobe") {
-        if (argsNo == 0)
-            light.StopStrobe();
-        else if (argsNo == 2)
-            light.StartStrobe(args[0].toFloat(), args[1].toFloat());
-        else 
-            stream.Respond("Wrong number of arguments", 400);
+        switch (argsNo) {
+            case 0:     light.StopStrobe();                                         break;
+            case 1:     light.StartRGBStrobe(args[0].toFloat());                    break;
+            case 2:     light.StartStrobe(args[0].toFloat(), args[1].toFloat());    break;
+            default:    stream.Respond("Wrong number of arguments", 400);           break;
+        }
     }
 
     else if (command == "flash") {
