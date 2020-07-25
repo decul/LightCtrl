@@ -44,7 +44,7 @@ void loop() {
     CheckWebRequests();
     CheckDateUpdate();
     light.HandleStrobe();  
-    //light.HandleAutoDimming();
+    light.HandleAutoDimming();
     CheckLED();
     
     switch (button.GetAction()) {
@@ -256,7 +256,7 @@ String HandleCommand(String input, AnyStream &stream) {
         stream.Println("void time(string isoTime);\n");
 
         stream.Println("string wifi();");
-        stream.Println("> void rssi();\n");
+        stream.Println("void rssi();\n");
 
         stream.Println("string gui();\n");
 

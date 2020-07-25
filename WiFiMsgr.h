@@ -91,6 +91,8 @@ public:
                 request.remove(0, request.indexOf("GET /") + 5);
                 request.remove(request.indexOf(" "));
                 request.replace("/", " "); 
+                request.trim();
+                request.toLowerCase();
                 return request;
             }
 

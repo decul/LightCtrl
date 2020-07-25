@@ -1,20 +1,26 @@
 #include "Light.h"
 #include <math.h>
 
+#define PWM_RANGE 4095
+
+
 Light::Light() {
-	for (byte l = 0; l < COLOR_COUNT; l++)
-        pinMode(ledPins[l], OUTPUT);
+    Wire.pins(D6, D5);
+    Wire.setClock(400000);
+    pwm.begin();
+    pwm.setPWMFreq(1600);
 }
+
 
 void Light::UpdateOutput() {
     for (byte l = 0; l < COLOR_COUNT; l++) 
-        analogWrite(ledPins[l], GetOutput(l));
+        pwm.setPWM(ledPins[l], 0, GetOutput(l));
 }
 
 
 void Light::AdjustColor(byte index, float difference) {
     Power(true);
-    lightColor[index] += max(0.0f, min(1.0f, lightColor[index] + difference));
+    lightColor[index] = max(0.0f, min(1.0f, lightColor[index] + difference));
     UpdateOutput();
     UpdateDimmer();
 }
@@ -47,7 +53,7 @@ float Light::GetColor(byte index) {
 String Light::GetColors() {
     String str = "";
     for (byte l = 0; l < COLOR_COUNT; l++) 
-        str += String(lightColor[l]) + " ";
+        str += String(lightColor[l], 3) + " ";
     return str;
 }
 
@@ -67,7 +73,7 @@ uint16_t Light::GetOutput(byte l) {
     if (!powerOn || lightColor[l] == 0.0) 
         return 0;
     else 
-        return pow(PWMRANGE, lightColor[l]);
+        return pow(PWM_RANGE, lightColor[l]);
 }
 
 String Light::GetOutputs() {
@@ -78,7 +84,7 @@ String Light::GetOutputs() {
 }
 
 uint16_t Light::SetOutput(byte index, uint16_t value) {
-    lightColor[index] = log(value) / log(PWMRANGE) + 0.00001;
+    lightColor[index] = log(value) / log(PWM_RANGE) + 0.00001;
     UpdateOutput();
     return GetOutput(index);
 }
@@ -103,19 +109,19 @@ void Light::HandleStrobe() {
     if (strobeMode == 2) {
         Power(false);
         strobePeriodTimer.WaitForExpiration();
-        digitalWrite(ledPins[strobeColor], LOW);
+        //digitalWrite(ledPins[strobeColor], LOW);
         if (++strobeColor > 2)
             strobeColor = 0;
-        digitalWrite(ledPins[strobeColor], HIGH);
+        //digitalWrite(ledPins[strobeColor], HIGH);
         strobePeriodTimer.Continue();
     }
     else if (strobeMode == 1) {
         Power(false);
         strobePeriodTimer.WaitForExpiration();
         strobeDurationTimer.Restart();
-        digitalWrite(ledPins[4], HIGH);
+        //digitalWrite(ledPins[4], HIGH);
         strobeDurationTimer.WaitForExpiration();
-        digitalWrite(ledPins[4], LOW);
+        //digitalWrite(ledPins[4], LOW);
         strobePeriodTimer.Continue();
     }
 }
@@ -152,6 +158,7 @@ void Light::HandleAutoDimming() {
                 dimmerFinished = true;
         }
 
+        Serial.println("Update");
         dimmerTimer.Start(10000);
     }
 }
@@ -165,16 +172,16 @@ void Light::ResetDimmer() {
 
     dimmerDisabled = false;
     dimmerFinished = false;
+
     DateTime now = DateTime::Now();
+    dimmerResetTime = now.ClosestDate(Time(defDimmerResetHour));
 
     Time dimEnd = MyEEPROM::GetDefaultDimEndTime();
     dimmerEndTime = now.ClosestDate(dimEnd);
-
-    if (now.time() > dimEnd || now.Hour() < defDimmerResetHour)
+    if (dimmerEndTime >= dimmerResetTime) 
         dimmerEndTime = now;
 
     dimmerStartTime = dimmerEndTime - TimeSpan(0, defDimmerSpan, 0, 0);
-    dimmerResetTime = now.ClosestDate(Time(defDimmerResetHour));
 }
 
 void Light::EnableDimmer() {
@@ -216,7 +223,7 @@ void Light::SetColorAsDefault() {
 
 
 void Light::Flash(long us) {
-    digitalWrite(ledPins[4], 1);
+    //digitalWrite(ledPins[4], 1);
     MicrosTimer::Sleep(us);
-    digitalWrite(ledPins[4], 0);
+    //digitalWrite(ledPins[4], 0);
 }

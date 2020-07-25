@@ -2,11 +2,15 @@
 #include <Arduino.h>
 #include <MillisTime.h>
 #include "MyEEPROM.h"
+#include <Wire.h>
+#include <Adafruit_PWMServoDriver.h>
 
 #define COLOR_COUNT 5
 
 class Light {
 private:
+    Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
+
     float lightColor[COLOR_COUNT];
     bool powerOn = false;
 
@@ -14,8 +18,8 @@ private:
     byte strobeColor = 0;
     MicrosTimer strobePeriodTimer;
     MicrosTimer strobeDurationTimer;
-    MicrosTimer dimmerTimer = MicrosTimer(0);
 
+    MillisTimer dimmerTimer = MillisTimer(0);
     DateTime dimmerResetTime;
     DateTime dimmerStartTime;
     DateTime dimmerEndTime;
@@ -24,7 +28,7 @@ private:
     float dimmerInitColor[COLOR_COUNT];
 
 public:
-    const byte ledPins[COLOR_COUNT] = { D6, D7, D8, D2, D1 };
+    const byte ledPins[COLOR_COUNT] = { 8, 11, 12, 15, 7 };
     
     Light();
     
