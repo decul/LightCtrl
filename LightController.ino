@@ -10,7 +10,7 @@
 #define k * 1000
 #define LED_HIGH 0
 #define LED_LOW  1
-#define LED_ESP  D0 // D4 // GPIO2
+#define LED_ESP  D4 // GPIO2
 #define LED_NODE D0 // GPIO16
 
 #define DATE_UPDATE_HOUR 5
@@ -29,7 +29,8 @@ DateTime bootTime;
 
 
 void setup() {
-    pinMode(LED_ESP, OUTPUT);
+    pinMode(LED_NODE, OUTPUT);
+    digitalWrite(LED_NODE, LED_LOW);
 
     SerialMsgr::Initialize();
     WiFiMsgr::Initialize();
@@ -45,7 +46,7 @@ void loop() {
     CheckDateUpdate();
     light.HandleStrobe();  
     light.HandleAutoDimming();
-    CheckLED();
+    //CheckLED();
     
     switch (button.GetAction()) {
         case Button::CLICK:
@@ -88,7 +89,7 @@ void CheckSerialMsgs() {
 
 void CheckLED() {
     if (ledTimer.HasExpired()) {
-        digitalWrite(LED_ESP, ledOff = !ledOff);
+        digitalWrite(LED_NODE, ledOff = !ledOff);
         if (!WiFiMsgr::IsConnected()) 
             ledTimer.AddTime(500 k);
         else if (Logger::AnyNewErrors())
@@ -96,8 +97,8 @@ void CheckLED() {
         else
             ledTimer.AddTime(ledOff ? 999900 : 100);
 
-        // if (!digitalRead(LED_ESP))
-        //     digitalWrite(LED_ESP, LED_LOW);
+        // if (!digitalRead(LED_NODE))
+        //     digitalWrite(LED_NODE, LED_LOW);
         // ledTimer.AddTime(1000 k);
     }
 }

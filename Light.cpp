@@ -2,6 +2,7 @@
 #include <math.h>
 
 #define PWM_RANGE 4095
+#define LINEAR_COMPONENT 2048
 
 
 Light::Light() {
@@ -70,10 +71,14 @@ void Light::Switch() {
 }
 
 uint16_t Light::GetOutput(byte l) {
-    if (!powerOn || lightColor[l] == 0.0) 
+    if (!powerOn || lightColor[l] == 0.0) {
         return 0;
-    else 
-        return pow(PWM_RANGE, lightColor[l]);
+    }
+    else {
+        float squared = pow(PWM_RANGE - LINEAR_COMPONENT, lightColor[l]);
+        float linear = LINEAR_COMPONENT * lightColor[l];
+        return squared + linear;
+    }
 }
 
 String Light::GetOutputs() {
@@ -158,8 +163,7 @@ void Light::HandleAutoDimming() {
                 dimmerFinished = true;
         }
 
-        Serial.println("Update");
-        dimmerTimer.Start(10000);
+        dimmerTimer.Start(1000);
     }
 }
 
