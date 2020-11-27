@@ -12,6 +12,7 @@ private:
     Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
     float lightColor[COLOR_COUNT];
+    float brightness = 1.0f;
     bool powerOn = false;
 
     byte strobeMode = 0;
@@ -34,12 +35,12 @@ public:
     
     void UpdateOutput();
 
-    void AdjustColor(byte index, float value);
+    void AdjustBrightness(float difference);
+    void AdjustColor(byte index, float difference);
     void SetColor(byte index, float value);
     void SetColors(float* color, byte count = COLOR_COUNT);
-    void SetColors(String* rgbwy);
+    void SetColors(String* rgbwy, String brightness = "");
 
-    float GetColor(byte index);
     String GetColors();
 
     String GetOutputs();

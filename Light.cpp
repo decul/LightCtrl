@@ -2,7 +2,8 @@
 #include <math.h>
 
 #define PWM_RANGE 4095
-#define LINEAR_COMPONENT 2048
+#define LINEAR_COMPONENT 1694
+#define FOURTH_COMPONENT 7
 
 
 Light::Light() {
@@ -19,43 +20,51 @@ void Light::UpdateOutput() {
 }
 
 
+float Limit(float value) {
+    return max(0.0f, min(1.0f, value));
+}
+
+void Light::AdjustBrightness(float difference) {
+    Power(true);
+    brightness = Limit(brightness + difference);
+    UpdateOutput();
+}
+
 void Light::AdjustColor(byte index, float difference) {
     Power(true);
-    lightColor[index] = max(0.0f, min(1.0f, lightColor[index] + difference));
+    lightColor[index] = Limit(lightColor[index] + difference);
     UpdateOutput();
     UpdateDimmer();
 }
 
 
 void Light::SetColor(byte index, float value) {
-    lightColor[index] = max(0.0f, min(1.0f, value));
+    lightColor[index] = Limit(value);
     UpdateOutput();
     UpdateDimmer();
 }
 
 void Light::SetColors(float* rgbwy, byte count) {
     for (byte l = 0; l < count; l++)
-        lightColor[l] = max(0.0f, min(1.0f, rgbwy[l]));
+        lightColor[l] = Limit(rgbwy[l]);
     UpdateOutput();
     UpdateDimmer();
 }
 
-void Light::SetColors(String* rgbwy) {
+void Light::SetColors(String* rgbwy, String brightness) {
+    if (brightness != "")
+        this->brightness = brightness.toFloat();
     for (byte l = 0; l < COLOR_COUNT; l++)
-        lightColor[l] = max(0.0f, min(1.0f, rgbwy[l].toFloat()));
+        lightColor[l] = Limit(rgbwy[l].toFloat());
     UpdateOutput();
     UpdateDimmer();
-}
-
-float Light::GetColor(byte index) {
-    return lightColor[index];
 }
 
 String Light::GetColors() {
     String str = "";
     for (byte l = 0; l < COLOR_COUNT; l++) 
         str += String(lightColor[l], 3) + " ";
-    return str;
+    return str + String(brightness, 3);
 }
 
 
@@ -70,14 +79,20 @@ void Light::Switch() {
     Power(!powerOn);
 }
 
+float LuminosityFunc(float input) {
+    float quartic = pow(FOURTH_COMPONENT * input, 4);
+    float linear = LINEAR_COMPONENT * input;
+    return quartic + linear;
+}
+
 uint16_t Light::GetOutput(byte l) {
     if (!powerOn || lightColor[l] == 0.0) {
         return 0;
     }
     else {
-        float squared = pow(PWM_RANGE - LINEAR_COMPONENT, lightColor[l]);
-        float linear = LINEAR_COMPONENT * lightColor[l];
-        return squared + linear;
+        float color = LuminosityFunc(lightColor[l]);
+        float bright = LuminosityFunc(brightness) / PWM_RANGE;
+        return color * bright;
     }
 }
 
@@ -89,7 +104,23 @@ String Light::GetOutputs() {
 }
 
 uint16_t Light::SetOutput(byte index, uint16_t value) {
-    lightColor[index] = log(value) / log(PWM_RANGE) + 0.00001;
+    float lower = 0.0f;
+    float upper = 1.0f;
+    float middle;
+
+    for (int i = 0; i < 15; i++) {
+        middle = (lower + upper) / 2.0f;
+        int lumino = int(LuminosityFunc(middle));
+
+        if (lumino < value) 
+            lower = middle;
+        else if (lumino > value) 
+            upper = middle;
+        else 
+            break;
+    }
+
+    lightColor[index] = middle;
     UpdateOutput();
     return GetOutput(index);
 }
@@ -168,6 +199,7 @@ void Light::HandleAutoDimming() {
 }
 
 void Light::ResetDimmer() {
+    brightness = 1.0f;
     for (byte i = 0; i < COLOR_COUNT; i++) {
         lightColor[i] = MyEEPROM::GetDefaultColor(i);
         dimmerInitColor[i] = lightColor[i];

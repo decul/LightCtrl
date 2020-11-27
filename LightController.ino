@@ -158,6 +158,17 @@ String HandleCommand(String input, AnyStream &stream) {
     String args[MAX_CMD_ARGS_LEN];
     byte argsNo = SerialMsgr::SplitCommand(input, command, args);
 
+    if (command == "web") {
+        stream.Print("<head><link rel='icon' href='https://decul.github.io/LightCtrl/img/rgb.png' type='image/x-icon'></head>");
+        command = args[0];
+        argsNo--;
+        for (int i = 0; i < argsNo; i++) {
+            args[i] = args[i + 1];
+        }
+    }
+
+    
+
     if (command == "on") {
         light.Power(true);
     }
@@ -173,9 +184,9 @@ String HandleCommand(String input, AnyStream &stream) {
     else if (command == "color") {
         switch (argsNo) {
             case 0:     return light.GetColors();
-            case 1:     return String(light.GetColor(args[0].toInt()));
             case 2:     light.SetColor(args[0].toInt(), args[1].toFloat());     break;
             case 5:     light.SetColors(args);                                  break;
+            case 6:     light.SetColors(args, args[5]);                         break;
             default:    stream.Respond("Wrong number of arguments", 400);       break;
         } 
     }
