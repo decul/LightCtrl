@@ -1,4 +1,4 @@
-#include "Light.h"
+#include "DimmableLight.h"
 #include "Button.h"
 #include <Arduino.h>
 #include <MillisTime.h>
@@ -16,7 +16,7 @@
 #define DATE_UPDATE_HOUR 5
 
 
-Light light;
+DimmableLight light;
 Button button(D3);
 AnyStream serialStream;
 
@@ -36,7 +36,7 @@ void setup() {
     WiFiMsgr::Initialize();
     MyEEPROM::Initialize();
 
-    light.ResetDimmer();
+    light.DimmerReset();
 }
 
 void loop() {
@@ -44,8 +44,7 @@ void loop() {
     CheckSerialMsgs();
     CheckWebRequests();
     CheckDateUpdate();
-    light.HandleStrobe();  
-    light.HandleAutoDimming();
+    light.DimmerHandle();
     //CheckLED();
     
     switch (button.GetAction()) {
@@ -204,9 +203,9 @@ String HandleCommand(String input, AnyStream &stream) {
         if (argsNo == 0)
             stream.Respond("No arguments given", 400);
         else if (args[0] == "on")
-            light.EnableDimmer();
+            light.DimmerEnable();
         else if (args[0] == "off")
-            light.DisableDimmer();
+            light.DimmerDisable();
         else if (args[0] == "setdefcol")
             light.SetColorAsDefault();
         else if (args[0] == "gettime")
@@ -218,12 +217,21 @@ String HandleCommand(String input, AnyStream &stream) {
     }
 
     else if (command == "strobe") {
-        switch (argsNo) {
-            case 0:     light.StopStrobe();                                         break;
-            case 1:     light.StartRGBStrobe(args[0].toFloat());                    break;
-            case 2:     light.StartStrobe(args[0].toFloat(), args[1].toFloat());    break;
-            default:    stream.Respond("Wrong number of arguments", 400);           break;
-        }
+        if (argsNo == 2) 
+            light.StrobeHardware(args[0].toFloat(), args[1].toInt());
+        else if (args[0] == "?") 
+            StrobeLight::StrobePrintHelpTo(stream);
+        else 
+            stream.Respond("Wrong arguments", 400);
+    }
+
+    else if (command == "rainbow") {
+        if (argsNo == 2) 
+            light.StrobeHardwareRGB(args[0].toFloat(), args[1].toInt());
+        else if (args[0] == "?") 
+            StrobeLight::StrobePrintHelpTo(stream);
+        else 
+            stream.Respond("Wrong arguments", 400);
     }
 
     else if (command == "flash") {
@@ -251,26 +259,29 @@ String HandleCommand(String input, AnyStream &stream) {
         stream.Println("void switch();\n");
 
         stream.Println("string color();");
-        stream.Println("float color(int led);");
         stream.Println("void color(int led, float value);");
-        stream.Println("void color(float col[5]);\n");
+        stream.Println("void color(float col[5|6]);\n");
+
+        stream.Println("void output(int led?, int value?);\n");
 
         stream.Println("void dimmer([on/off/setdefcol/gettime]);");
         stream.Println("void dimmer([settime], string iso);\n");
 
-        stream.Println("void strobe(float width, float freq);");
-        stream.Println("void strobe();");
+        stream.Println("void strobe(float width, int freq);");
+        stream.Println("void strobe([?]);");
+        stream.Println("void rainbow(float width, int freq);");
+        stream.Println("void rainbow([?]);");
         stream.Println("void flash(int micros);\n");
 
         stream.Println("void reset();\n");
 
-        stream.Println("string time();");
-        stream.Println("void time(string isoTime);\n");
+        stream.Println("void time(string isoTime?);\n");
 
         stream.Println("string wifi();");
         stream.Println("void rssi();\n");
 
-        stream.Println("string gui();\n");
+        stream.Println("string gui();");
+        stream.Println("string web(string[] command);\n");
 
         stream.Println("string log([e/i/d/c/ ]);\n");
     }
