@@ -1,4 +1,4 @@
-#include "DimmableLight.h"
+#include "XmasLight.h"
 #include "Button.h"
 #include <Arduino.h>
 #include <MillisTime.h>
@@ -16,7 +16,7 @@
 #define DATE_UPDATE_HOUR 5
 
 
-DimmableLight light;
+XmasLight light;
 Button button(D3);
 AnyStream serialStream;
 
@@ -45,6 +45,7 @@ void loop() {
     CheckWebRequests();
     CheckDateUpdate();
     light.DimmerHandle();
+    light.XmasHandle();
     //CheckLED();
     
     switch (button.GetAction()) {
@@ -239,6 +240,13 @@ String HandleCommand(String input, AnyStream &stream) {
             stream.Respond("No arguments given", 400);
         else 
             light.Flash(args[0].toInt());
+    }
+
+    else if (command == "xmas") {
+        if (argsNo == 1)
+            light.XmasStart(args[0].toInt());
+        else 
+            light.XmasStop();
     }
 
     else if (command == "reset") {

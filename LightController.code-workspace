@@ -41,7 +41,9 @@
             "optional": "cpp",
             "limits": "cpp",
             "*.tcc": "cpp",
-            "sstream": "cpp"
+            "sstream": "cpp",
+            "*.rh": "cpp",
+            "streambuf": "cpp"
         }
     }
 }
