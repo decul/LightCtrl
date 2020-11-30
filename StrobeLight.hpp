@@ -1,6 +1,6 @@
 #pragma once
-#include "AnyStream.h"
-#include "Light.h"
+#include "AnyStream.hpp"
+#include "Light.hpp"
 
 class StrobeLight : public Light {
 private:

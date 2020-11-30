@@ -9,41 +9,6 @@
 	],
     "settings": {
         "C_Cpp.errorSquiggles": "Disabled",
-        "C_Cpp.intelliSenseEngineFallback": "Enabled",
-        "files.associations": {
-            "config.json": "jsonc",
-            "algorithm": "cpp",
-            "forward_list": "cpp",
-            "list": "cpp",
-            "chrono": "cpp",
-            "ratio": "cpp",
-            "system_error": "cpp",
-            "type_traits": "cpp",
-            "xfunctional": "cpp",
-            "xstddef": "cpp",
-            "xtr1common": "cpp",
-            "future": "cpp",
-            "xlocale": "cpp",
-            "xstring": "cpp",
-            "xutility": "cpp",
-            "ostream": "cpp",
-            "array": "cpp",
-            "initializer_list": "cpp",
-            "vector": "cpp",
-            "xhash": "cpp",
-            "xtree": "cpp",
-            "cstddef": "cpp",
-            "xiosbase": "cpp",
-            "iosfwd": "cpp",
-            "*.idl": "cpp",
-            "random": "cpp",
-            "functional": "cpp",
-            "optional": "cpp",
-            "limits": "cpp",
-            "*.tcc": "cpp",
-            "sstream": "cpp",
-            "*.rh": "cpp",
-            "streambuf": "cpp"
-        }
+        "C_Cpp.intelliSenseEngineFallback": "Enabled"
     }
 }

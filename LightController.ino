@@ -1,11 +1,11 @@
-#include "XmasLight.h"
-#include "Button.h"
+#include "XmasLight.hpp"
+#include "Button.hpp"
 #include <Arduino.h>
-#include <MillisTime.h>
-#include "MyEEPROM.h"
-#include "SerialMsgr.h"
-#include "WiFiMsgr.h"
-#include "AnyStream.h"
+#include <MillisTime.hpp>
+#include "MyEEPROM.hpp"
+#include "SerialMsgr.hpp"
+#include "WiFiMsgr.hpp"
+#include "AnyStream.hpp"
 
 #define k * 1000
 #define LED_HIGH 0

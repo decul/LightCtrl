@@ -1,5 +1,5 @@
 #pragma once
-#include <MillisTime.h>
+#include <MillisTime.hpp>
 
 class Button {
     const byte buttonPin;

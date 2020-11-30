@@ -1,6 +1,6 @@
 #pragma once
-#include <MillisTime.h>
-#include "AnyStream.h"
+#include <MillisTime.hpp>
+#include "AnyStream.hpp"
 
 #define LOG_MAX_LENGTH 8192
 

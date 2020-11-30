@@ -1,7 +1,7 @@
 #pragma once
-#include "MillisTime.h"
-#include "AnyStream.h"
-#include "DimmableLight.h"
+#include "MillisTime.hpp"
+#include "AnyStream.hpp"
+#include "DimmableLight.hpp"
 
 class XmasLight : public DimmableLight {
 private:
