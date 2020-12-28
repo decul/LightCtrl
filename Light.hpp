@@ -1,7 +1,9 @@
 #pragma once
-#include <Arduino.h>
-#include <Wire.h>
-#include <Adafruit_PWMServoDriver.h>
+#include "ArduinoSafe.hpp"
+#ifndef C_CPP 
+    #include <Adafruit_PWMServoDriver.h>
+#endif
+    #include <Wire.h>
 
 #define COLOR_COUNT 5
 #define PWM_RANGE 4095
@@ -31,6 +33,7 @@ public:
     void SetColor(byte index, float value);
     void SetColors(float* color, byte count = COLOR_COUNT);
     void SetColors(String* rgbwy, String brightness = "");
+    void SetColors(float r, float g, float b, float w, float y);
 
     String GetColors();
 

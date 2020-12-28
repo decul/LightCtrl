@@ -1,5 +1,5 @@
 #pragma once
-#include <Arduino.h>
+#include "ArduinoSafe.hpp"
 
 #define MAX_CMD_ARGS_LEN 8
 

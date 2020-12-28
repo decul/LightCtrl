@@ -56,6 +56,16 @@ void Light::SetColors(String* rgbwy, String brightness) {
     OnColorChange();
 }
 
+void Light::SetColors(float r, float g, float b, float w, float y) {
+    lightColor[0] = r;
+    lightColor[1] = g;
+    lightColor[2] = b;
+    lightColor[3] = w;
+    lightColor[4] = y;
+    UpdateOutput();
+    OnColorChange();
+}
+
 String Light::GetColors() {
     String str = "";
     for (byte l = 0; l < COLOR_COUNT; l++) 

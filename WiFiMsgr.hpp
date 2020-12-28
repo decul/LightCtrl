@@ -1,14 +1,16 @@
 #pragma once
-#include <Arduino.h>
-#include <ESP8266WiFi.h>
+#include "ArduinoSafe.hpp"
+#ifndef C_CPP 
+    #include <ESP8266WiFi.h>
+#endif
 #include <MillisTime.hpp>
 #include "Logger.hpp"
 
 
-#define REQUEST_TIMEOUT 5000
+#define REQUEST_TIMEOUT 1000
 #define CONNECTION_TIMEOUT 25000
 #define RECONNECT_DELAY 5000
-//#define LED_BLINK_PERIOD 500
+
 
 #define LAN_SSID "Karuzela"
 #define LAN_PASS "Programisci15k"
@@ -96,22 +98,13 @@ public:
                 return request;
             }
 
-            if (timeoutTimer.HasExpired()) 
+            if (timeoutTimer.HasExpired()) {
+                client.println("HTTP/1.1 408");
                 client.stop();
+            }
         }
 
         return "";
-    }
-
-    static void SendResponse(WiFiClient &client, String response) {
-        client.println("HTTP/1.1 200 OK");
-        client.println("Access-Control-Allow-Origin: *");
-        client.println("Content-type:text/html");
-        client.println("Connection: close");
-        client.println();
-        client.println(response);
-        client.println();
-        client.stop();
     }
 
     static bool IsConnected() {

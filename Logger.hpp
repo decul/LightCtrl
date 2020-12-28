@@ -132,7 +132,6 @@ public:
 
         if (stream.IsNew())
             stream.Print("Nothing to show");
-        stream.Close();
 
         newErrors = false;
         if (clear) {

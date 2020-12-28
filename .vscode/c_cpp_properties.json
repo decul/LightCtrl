@@ -3,24 +3,17 @@
         {
             "name": "Win32",
             "includePath": [
-                "C:\\Users\\Tomek\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.7.1\\**",
-                "C:\\Users\\Tomek\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**",
+                "${workspaceRoot}\\*",
                 "C:\\BackedUp\\Arduino_apps\\libraries\\MillisTime",
                 "C:\\Program Files (x86)\\Arduino\\tools\\**",
-                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**",
-                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino",
-                "${workspaceRoot}",
-                "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\variants\\standard",
-                "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\wiring_digital.c"
+                "C:\\Users\\Tomek\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.7.1\\**",
+                "C:\\Users\\Tomek\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**"
             ],
             "forcedInclude": [],
             "browse": {
                 "limitSymbolsToIncludedHeaders": false,
                 "path": [
-                    "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino",
-                    "${workspaceRoot}",
-                    "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\variants\\standard",
-                    "c:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\wiring_digital.c"
+                    "${workspaceRoot}\\*"
                 ]
             },
             "intelliSenseMode": "msvc-x64",
@@ -28,7 +21,8 @@
             "cStandard": "c11",
             "cppStandard": "c++17",
             "defines": [
-                "USBCON"
+                "USBCON",
+                "C_CPP"
             ]
         }
     ],

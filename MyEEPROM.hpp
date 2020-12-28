@@ -19,25 +19,25 @@ public:
         EEPROM.begin(22);
     }
 
-    static float GetDefaultColor(byte led) {
-        float value;
-        EEPROM.get(defaultColorAddr + led * 4, value);
-        return value;
-    }
-    static void SetDefaultColor(byte led, float value) {
-        if (led < 5)
-            EEPROM.put(defaultColorAddr + led * 4, value);
-        EEPROM.commit();
-    }
+    // static float GetDefaultColor(byte led) {
+    //     float value;
+    //     EEPROM.get(defaultColorAddr + led * 4, value);
+    //     return value;
+    // }
+    // static void SetDefaultColor(byte led, float value) {
+    //     if (led < 5)
+    //         EEPROM.put(defaultColorAddr + led * 4, value);
+    //     EEPROM.commit();
+    // }
 
-    static Time GetDefaultDimEndTime() {
-        byte h = EEPROM.read(defaultDimEndAddr);
-        byte m = EEPROM.read(defaultDimEndAddr + 1);
-        return Time(h, m);
-    }
-    static void SetDefaultDimEndTime(Time time) {
-        EEPROM.write(defaultDimEndAddr, time.Hour());
-        EEPROM.write(defaultDimEndAddr + 1, time.Min());
-        EEPROM.commit();
-    }
+    // static Time GetDefaultDimEndTime() {
+    //     byte h = EEPROM.read(defaultDimEndAddr);
+    //     byte m = EEPROM.read(defaultDimEndAddr + 1);
+    //     return Time(h, m);
+    // }
+    // static void SetDefaultDimEndTime(Time time) {
+    //     EEPROM.write(defaultDimEndAddr, time.Hour());
+    //     EEPROM.write(defaultDimEndAddr + 1, time.Min());
+    //     EEPROM.commit();
+    // }
 };

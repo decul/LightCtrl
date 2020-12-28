@@ -18,11 +18,109 @@ private:
 
     MillisTimer dimmerTimer = MillisTimer(UPDATE_PERIOD * 1000);
     bool dimmerDisabled = false;
+    byte skipCount = 0;
     bool initialized = false;
     byte state = 0;
     
     DateTime now;
     float delta;
+
+
+
+    void Initialize() {
+        Time time = now.time();
+
+        while (!time.IsBetween(stateStartTimes[state], StateEndTime(state)) && state < STATE_COUNT)
+            state++;
+        stateEndTime = now.ClosestDate(StateEndTime(state));
+
+        if (state < 4)
+            SetDawnLight();
+        else if (state < 5)
+            SetDaylight();
+        else
+            SetEveningLight();
+        UpdateOutput();
+        
+        initialized = true;
+    }
+
+
+    void DimLights() {
+        float secondsLeft = (stateEndTime - now).TotalSeconds();
+        if (secondsLeft > 0.0)
+            delta = UPDATE_PERIOD / (secondsLeft + UPDATE_PERIOD);
+        else 
+            delta = 1.0f;
+
+        switch (state) {
+            case 0:     // Dim to black
+                Dim(0.0f);
+                break;
+
+            case 1:     // Raise to blue
+                Dim(1.0f);
+                Dim(2, 1.0f);
+                break;
+
+            case 2:     // Raise to white-blue
+                Dim(1.0f);
+                Dim(2, 1.0f);
+                Dim(3, 1.0f);
+                break;
+
+            case 3:     // Raise to daylight
+                Dim(1.0f);
+                Dim(0, daylightRed);
+                Dim(1, daylightGreen);
+                Dim(2, 1.0f);
+                Dim(3, 1.0f);
+                Dim(4, 1.0f);
+                break;
+
+            case 5:     // Dim to evening light
+                Dim(0, 1.0f);
+                Dim(1, eveningGreen);
+                Dim(2, 0.0f);
+                Dim(3, 0.0f);
+                break;
+
+            case 7:     // Dim to dawn
+                Dim(0, 1.0f);
+                Dim(1, dawnGreen);
+                Dim(2, 0.0f);
+                Dim(3, 0.0f);
+                Dim(4, 0.0f);
+                break;
+        }
+
+        if (state != 4 && state != 6)
+            UpdateOutput();
+    }
+
+    void Dim(byte led, float value) {
+        lightColor[led] = delta * value + (1.0f - delta) * lightColor[led];
+    }
+
+    void Dim(float value) {
+        brightness = delta * value + (1.0f - delta) * brightness;
+    }
+
+    void DimUp(byte led, float value) {
+        if (value > lightColor[led])
+            Dim(led, value);
+    }
+
+    void DimDown(byte led, float value) {
+        if (value < lightColor[led])
+            Dim(led, value);
+    }
+
+
+    Time& StateEndTime(byte stateIdx) {
+        return stateStartTimes[(state + 1) % STATE_COUNT];
+    }
+
 
 
 public:
@@ -39,125 +137,35 @@ public:
 
 
     void DimmerHandle() {
-        if (!dimmerTimer.HasExpired() || StrobeRunning() || !DateTime::IsSet()) 
+        if (!dimmerTimer.HasExpired() || !DateTime::IsSet()) 
             return;
 
         now = DateTime::Now();
     
-        if (!initialized) {
-            initialized = true;
-            Time time = now.time();
+        if (!initialized)
+            Initialize();
 
-            while (!time.IsBetween(stateStartTimes[state], StateEndTime(state)) && state < STATE_COUNT)
-                state++;
-            stateEndTime = now.ClosestDate(StateEndTime(state));
-
-            // if (state < 4)
-            //     SetColors({ 1.0f, dawnGreen, 0.0f, 0.0f, 0.0f });
-            // else if (state < 5)
-            //     SetColors({ daylightRed, daylightGreen, 1.0f, 1.0f, 1.0f });
-            // else
-            //     SetColors({ 1.0f, eveningGreen, 0.0f, 0.0f, 1.0f });
-            // UpdateColors();
-        }
-
-        float secondsLeft = (stateEndTime - now).TotalSeconds();
-        if (secondsLeft > 0.0)
-            delta = UPDATE_PERIOD / (secondsLeft + UPDATE_PERIOD);
-        else 
-            delta = 1.0f;
-
-        switch (state) {
-            case 0:     // Dim to black
-                for (int l = 0; l < 5; l++)
-                    DimDown(l, 0.0f);
-                UpdateOutput();
-                break;
-
-            case 1:     // Raise to blue
-                DimUp(2, 1.0f);
-                UpdateOutput();
-                break;
-
-            case 2:     // Raise to white-blue
-                DimUp(2, 1.0f);
-                DimUp(3, 1.0f);
-                UpdateOutput();
-                break;
-
-            case 3:     // Raise to daylight
-                DimUp(0, daylightRed);
-                DimUp(1, daylightGreen);
-                DimUp(2, 1.0f);
-                DimUp(3, 1.0f);
-                DimUp(4, 1.0f);
-                UpdateOutput();
-                break;
-
-            case 5:     // Dim to evening light
-                Dim(0, 1.0f);
-                Dim(1, eveningGreen);
-                DimDown(2, 0.0f);
-                DimDown(3, 0.0f);
-                UpdateOutput();
-                break;
-
-            case 7:     // Dim to dawn
-                DimDown(1, dawnGreen);
-                DimDown(2, 0.0f);
-                DimDown(3, 0.0f);
-                DimDown(4, 0.0f);
-                UpdateOutput();
-                break;
-        }
+        if (!skipCount && !dimmerDisabled && !StrobeRunning())
+            DimLights();
 
         if (now > stateEndTime) {
             state = (state + 1) % STATE_COUNT;
-            if (state == 1)
-                brightness = 1.0f;\
-            stateEndTime = now.ClosestDate(StateEndTime(state));
+            stateEndTime = stateEndTime.ClosestDate(StateEndTime(state));
+
+            if (state == 1 && !skipCount && !dimmerDisabled) {
+                SetColors(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+                brightness = 1.0f;
+            }
+            if (state == 3)
+                DimmerEnable();
+
+            if (skipCount > 0)
+                skipCount--;
         }
 
         dimmerTimer.Continue();
     }
 
-    void Dim(byte led, float value) {
-        lightColor[led] = delta * value + (1.0f - delta) * lightColor[led];
-    }
-
-    void DimUp(byte led, float value) {
-        if (value > lightColor[led])
-            Dim(led, value);
-    }
-
-    void DimDown(byte led, float value) {
-        if (value < lightColor[led])
-            Dim(led, value);
-    }
-
-
-
-    void DimmerReset() {
-        // brightness = 1.0f;
-        // for (byte i = 0; i < COLOR_COUNT; i++) {
-        //     lightColor[i] = MyEEPROM::GetDefaultColor(i);
-        //     dimmerInitColor[i] = lightColor[i];
-        // }
-        // UpdateOutput();
-
-        // dimmerDisabled = false;
-        // dimmerFinished = false;
-
-        // DateTime now = DateTime::Now();
-        // dimmerResetTime = now.ClosestDate(Time(defDimmerResetHour));
-
-        // Time dimEnd = MyEEPROM::GetDefaultDimEndTime();
-        // dimmerEndTime = now.ClosestDate(dimEnd);
-        // if (dimmerEndTime >= dimmerResetTime) 
-        //     dimmerEndTime = now;
-
-        // dimmerStartTime = dimmerEndTime - TimeSpan(0, defDimmerSpan, 0, 0);
-    }
 
     void DimmerEnable() {
         dimmerDisabled = false;
@@ -167,14 +175,20 @@ public:
         dimmerDisabled = true;
     }
 
-
-
-    Time& StateEndTime(byte stateIdx) {
-        return stateStartTimes[(state + 1) % STATE_COUNT];
+    void DimmerSkip(byte count) {
+        skipCount = count;
     }
 
-    void SetColorAsDefault() {
-        for (byte i = 0; i < COLOR_COUNT; i++) 
-            MyEEPROM::SetDefaultColor(i, lightColor[i]);
+
+    void SetDaylight() {
+        SetColors(daylightRed, daylightGreen, 1.0f, 1.0f, 1.0f);
+    }
+
+    void SetEveningLight() {
+        SetColors(1.0f, eveningGreen, 0.0f, 0.0f, 1.0f);
+    }
+
+    void SetDawnLight() {
+        SetColors(1.0f, dawnGreen, 0.0f, 0.0f, 0.0f);
     }
 };

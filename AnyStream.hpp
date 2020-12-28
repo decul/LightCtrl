@@ -1,5 +1,7 @@
 #pragma once
-#include <ESP8266WiFi.h>
+#ifndef C_CPP
+    #include <ESP8266WiFi.h>
+#endif
 
 #define ANY_STREAM_NEW 0
 #define ANY_STREAM_OPENED 1
@@ -19,10 +21,9 @@ public:
         client = &_client;
     }
 
-    void Respond(const String &str, const int16_t &code = 200) {
+    void Respond(const String &response, const int16_t &code = 200) {
         Start(code);
-        Println(str);
-        Close();
+        Println(response);
     }
 
     void Start(const int16_t &code) {
@@ -32,7 +33,7 @@ public:
             client->println("Access-Control-Allow-Origin: *");
             client->println("Content-type:text/html");
             client->println("Connection: close");
-            client->println();
+            client->print("\n{\"resp\":\"");
             state = ANY_STREAM_OPENED;
         }
     }
@@ -61,9 +62,13 @@ public:
         Print('\n');
     }
 
-    void Close() {
+    void Close(const String &colors, bool errors) {
         if (client != nullptr) {
-            client->println("\n");
+            client->print("\"");
+            if (colors.length() > 0)
+                client->print(",\"col\":\"" + colors + "\"");
+            client->print(",\"err\":" + String(errors));
+            client->println("}\n");
             client->stop();
             state = ANY_STREAM_CLOSED;
         }

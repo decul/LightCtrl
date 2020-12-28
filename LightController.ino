@@ -1,11 +1,11 @@
 #include "XmasLight.hpp"
 #include "Button.hpp"
-#include <Arduino.h>
 #include <MillisTime.hpp>
 #include "MyEEPROM.hpp"
 #include "SerialMsgr.hpp"
 #include "WiFiMsgr.hpp"
 #include "AnyStream.hpp"
+#include <ESP8266HTTPClient.h>
 
 #define k * 1000
 #define LED_HIGH 0
@@ -27,7 +27,6 @@ MillisTimer dateUpdateTimer(0);
 byte dateUpdateFailCount = 0;
 DateTime bootTime;
 
-
 void setup() {
     pinMode(LED_NODE, OUTPUT);
     digitalWrite(LED_NODE, LED_LOW);
@@ -35,8 +34,6 @@ void setup() {
     SerialMsgr::Initialize();
     WiFiMsgr::Initialize();
     MyEEPROM::Initialize();
-
-    light.DimmerReset();
 }
 
 void loop() {
@@ -73,7 +70,7 @@ void CheckWebRequests() {
         String response = HandleCommand(command, stream);
         if (stream.IsNew())
             stream.Print(response);
-        stream.Close();
+        stream.Close(light.GetColors(), Logger::AnyNewErrors());
     }
 }
 
@@ -115,6 +112,7 @@ static bool UpdateDate(bool retry = false) {
         if (date.UnixTime() != 0) {
             bool firstUpdate = !DateTime::IsSet();
             DateTime::Set(date);
+            Logger::Debug("Date Updated");
             if (firstUpdate) {
                 Serial.println("Date Updated");
                 bootTime = DateTime::LastResetDate();
@@ -207,15 +205,20 @@ String HandleCommand(String input, AnyStream &stream) {
             light.DimmerEnable();
         else if (args[0] == "off")
             light.DimmerDisable();
-        else if (args[0] == "setdefcol")
-            light.SetColorAsDefault();
-        else if (args[0] == "gettime")
-            return MyEEPROM::GetDefaultDimEndTime().ToString();
-        else if (args[0] == "settime" && argsNo == 2)
-            MyEEPROM::SetDefaultDimEndTime(Time::FromString(args[1]));
+        else if (args[0] == "skip") {
+            int count = (argsNo == 2) ? args[1].toInt() : 1;
+            light.DimmerSkip(count);
+        }
         else 
             stream.Respond("Invalid arguments", 400);
     }
+
+    else if (command == "day") 
+        light.SetDaylight();
+    else if (command == "evening")
+        light.SetEveningLight();
+    else if (command == "dawn")
+        light.SetDawnLight();
 
     else if (command == "strobe") {
         if (argsNo == 2) 
@@ -251,6 +254,7 @@ String HandleCommand(String input, AnyStream &stream) {
 
     else if (command == "reset") {
         stream.Respond("=== Software Reset ===");
+        stream.Close("", false);
         while (true);
     }
 
@@ -262,18 +266,18 @@ String HandleCommand(String input, AnyStream &stream) {
     }
 
     else if (command == "?" || command == "help") {
-        stream.Println("void on();");
-        stream.Println("void off();");
-        stream.Println("void switch();\n");
+        stream.Println("void [on/off/switch]\n");
 
         stream.Println("string color();");
         stream.Println("void color(int led, float value);");
-        stream.Println("void color(float col[5|6]);\n");
+        stream.Println("void color(float col[5/6]);\n");
 
         stream.Println("void output(int led?, int value?);\n");
 
-        stream.Println("void dimmer([on/off/setdefcol/gettime]);");
-        stream.Println("void dimmer([settime], string iso);\n");
+        stream.Println("void [day/evening/dawn];\n");
+
+        stream.Println("void dimmer([on/off]);");
+        stream.Println("void dimmer([skip], int count?);\n");
 
         stream.Println("void strobe(float width, int freq);");
         stream.Println("void strobe([?]);");
@@ -291,7 +295,7 @@ String HandleCommand(String input, AnyStream &stream) {
         stream.Println("string gui();");
         stream.Println("string web(string[] command);\n");
 
-        stream.Println("string log([e/i/d/c/ ]);\n");
+        stream.Println("string log([e/i/d/clr/test/ ]);\n");
     }
 
     else if (command == "wifi") {
@@ -315,15 +319,17 @@ String HandleCommand(String input, AnyStream &stream) {
     else if (command == "log") {
         if (argsNo == 0)
             Logger::PrintTo(stream);
-        else if (args[0] == "c")
-            Logger::PrintTo(stream, 'D', true);
         else if (args[0].length() == 1)
             Logger::PrintTo(stream, args[0][0]);
+        else if (args[0] == "clr")
+            Logger::PrintTo(stream, 'D', true);
+        else if (args[0] == "test")
+            Logger::Error("Test Error");
         else 
             stream.Respond("Invalid arguments", 400);
     }
 
-    else {
+    else if (command != "status") {
         stream.Respond("Unrecognized command: '" + command + "'", 400);
     }
 
