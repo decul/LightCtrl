@@ -5,7 +5,9 @@
 
 #define ANY_STREAM_NEW 0
 #define ANY_STREAM_OPENED 1
-#define ANY_STREAM_CLOSED 2
+#define ANY_STREAM_OPENED_AS_JSON 2
+#define ANY_STREAM_OPENED_AS_HTML 3
+#define ANY_STREAM_CLOSED 4
 
 class AnyStream {
 private:
@@ -26,15 +28,19 @@ public:
         Println(response);
     }
 
-    void Start(const int16_t &code) {
+    void Start(const int16_t &code, const bool &asHTML = false, const String &additionalHeaders = "") {
         if (client != nullptr && state == ANY_STREAM_NEW) {
             client->print("HTTP/1.1 ");
             client->println(code);
             client->println("Access-Control-Allow-Origin: *");
-            client->println("Content-type:text/html");
             client->println("Connection: close");
-            client->print("\n{\"resp\":\"");
-            state = ANY_STREAM_OPENED;
+            if (additionalHeaders.length() > 0)
+                client->println(additionalHeaders);
+            if (asHTML)
+                client->print("Content-type:text/html\n\n");
+            else
+                client->print("Content-type:application/json\n\n{\"resp\":\"");
+            state = asHTML ? ANY_STREAM_OPENED_AS_HTML : ANY_STREAM_OPENED_AS_JSON;
         }
     }
 
@@ -64,11 +70,14 @@ public:
 
     void Close(const String &colors, bool errors) {
         if (client != nullptr) {
-            client->print("\"");
-            if (colors.length() > 0)
-                client->print(",\"col\":\"" + colors + "\"");
-            client->print(",\"err\":" + String(errors));
-            client->println("}\n");
+            if (state == ANY_STREAM_OPENED_AS_JSON) {
+                client->print("\"");
+                if (colors.length() > 0)
+                    client->print(",\"col\":\"" + colors + "\"");
+                client->print(",\"err\":" + String(errors));
+                client->println("}");
+            }
+            client->println("\n");
             client->stop();
             state = ANY_STREAM_CLOSED;
         }

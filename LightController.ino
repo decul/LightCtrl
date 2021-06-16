@@ -118,7 +118,7 @@ static bool UpdateDate(bool retry = false) {
                 bootTime = DateTime::LastResetDate();
             }
             dateUpdateFailCount = 0;
-            dateUpdateTimer.Start(Time(DATE_UPDATE_HOUR));
+            dateUpdateTimer.Start(Time(DATE_UPDATE_HOUR), 600);
             return true;
         }
         else {
@@ -129,7 +129,7 @@ static bool UpdateDate(bool retry = false) {
         Logger::Info("Date Update Failed: " + String(code));
     }
 
-    dateUpdateTimer.Start(Time(DATE_UPDATE_HOUR));
+    dateUpdateTimer.Start(Time(DATE_UPDATE_HOUR), 600);
     if (retry) {
         if (++dateUpdateFailCount < 5) {
             dateUpdateTimer.Start(5000);
@@ -155,16 +155,6 @@ String HandleCommand(String input, AnyStream &stream) {
     String command;
     String args[MAX_CMD_ARGS_LEN];
     byte argsNo = SerialMsgr::SplitCommand(input, command, args);
-
-    if (command == "web") {
-        stream.Print("<head><link rel='icon' href='https://decul.github.io/LightCtrl/img/rgb.png' type='image/x-icon'></head>");
-        command = args[0];
-        argsNo--;
-        for (int i = 0; i < argsNo; i++) {
-            args[i] = args[i + 1];
-        }
-    }
-
     
 
     if (command == "on") {
@@ -261,8 +251,12 @@ String HandleCommand(String input, AnyStream &stream) {
     else if (command == "time") {
         if (argsNo == 0)
             return DateTime::Now().ToISO();
+        else if (args[0] == "update")
+            UpdateDate();
         else if (DateTime::FromISO(args[0]).UnixTime() != 0)
             DateTime::Set(DateTime::FromISO(args[0]));
+        else 
+            stream.Respond("Wrong arguments", 400);
     }
 
     else if (command == "?" || command == "help") {
@@ -310,6 +304,7 @@ String HandleCommand(String input, AnyStream &stream) {
     }
 
     else if (command == "" || command == "gui") {
+        stream.Start(200, true);
         stream.Println("<body style='background: #151515;'>");
         stream.Println("<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>");
         stream.Println("<script type='text/javascript' src='https://decul.github.io/LightCtrl/scripts.js'></script>");
@@ -327,6 +322,10 @@ String HandleCommand(String input, AnyStream &stream) {
             Logger::Error("Test Error");
         else 
             stream.Respond("Invalid arguments", 400);
+    }
+
+    else if (command == "favicon.ico") {
+        stream.Start(301, true, "Location: https://decul.github.io/LightCtrl/img/rgb.png");
     }
 
     else if (command != "status") {
