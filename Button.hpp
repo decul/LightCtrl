@@ -10,6 +10,7 @@ class Button {
     MillisTimer refreshTimer = MillisTimer(0);
 
     byte state = 1;
+    byte clickCount = 0;
 
     MillisTimer timer;
 
@@ -30,13 +31,20 @@ class Button {
     }
 
 public:
+    // Least significant bit is set if button was held after last click
+    // Other bits are the number of clicks
     static const byte NO_ACTION = 0;
-    static const byte CLICK = 1;
-    static const byte HOLD = 2;
+    static const byte HOLD = 1;
+    static const byte CLICK = 2;
     static const byte CLICK_HOLD = 3;
     static const byte DOUBLE_CLICK = 4;
-    static const byte DOWN = 11;
-    static const byte UP = 12;
+    static const byte DOUBLE_CLICK_HOLD = 5;
+    static const byte TRIPLE_CLICK = 6;
+    static const byte TRIPLE_CLICK_HOLD = 7;
+    static const byte QUADRUPLE_CLICK = 8;
+    
+    static const byte DOWN = 255;
+    static const byte UP = 254;
 
     Button(byte arduinoPin) 
         : buttonPin(arduinoPin) {
@@ -48,9 +56,10 @@ public:
     byte GetAction() {
         if (refreshTimer.HasExpired()) {
             switch (state) {
-                // Waiting for click
+                // Waiting for 1st click
                 case 1: 
                     if (pressed()) {
+                        clickCount = 0;
                         state = 2;
                         timer.Start(chainTime);
                         return DOWN;
@@ -60,6 +69,7 @@ public:
                 // Waiting for release
                 case 2:
                     if (released()) {
+                        clickCount++;
                         state = 4;
                         timer.Start(chainTime);
                         return UP;
@@ -67,7 +77,7 @@ public:
                     else if (timer.HasExpired()) {
                         state = 3;
                         timer.AddTime(continuousTime);
-                        return HOLD;
+                        return (clickCount << 1) | 1;
                     }
                     break;
 
@@ -79,56 +89,22 @@ public:
                     }
                     else if (timer.HasExpired()) {
                         timer.Continue();
-                        return HOLD;
+                        return (clickCount << 1) | 1;
                     }
                     break;
 
-                // Waiting for 2nd click
+                // Waiting for next click
                 case 4:
                     if (pressed()) {
-                        state = 5;
+                        state = 2;
                         timer.Start(chainTime);
                         return DOWN;
                     }
                     else if (timer.HasExpired()) {
                         state = 1;
-                        return CLICK;
+                        return (clickCount << 1) & 0xFE;
                     }
                     break;
-
-                // Waiting for 2nd release
-                case 5:
-                    if (released()) {
-                        state = 7;
-                        timer.Start(chainTime);
-                        return UP;
-                    }
-                    else if (timer.HasExpired()) {
-                        state = 6;
-                        timer.AddTime(continuousTime);
-                        return CLICK_HOLD;
-                    }
-                    break;
-
-                // Holding after click
-                case 6: 
-                    if (released()) {
-                        state = 1;
-                        return UP;
-                    }
-                    else if (timer.HasExpired()) {
-                        timer.Continue();
-                        return CLICK_HOLD;
-                    }
-                    break;
-
-                // Can be used for detecting tripple click. 
-                // Now is used to delay DOUBLE_CLICK, because releasing in 5th state returns UP
-                case 7:
-                    state = 1;
-                    return DOUBLE_CLICK;
-                    break;
-
 
                 default:
                     state = 1;

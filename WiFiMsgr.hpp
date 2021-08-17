@@ -41,8 +41,7 @@ public:
                 Connect();
             }
             else if (status != WL_CONNECTED && connectionTimer.HasExpired()) {
-                WiFi.disconnect();
-                connectionTimer.Start(RECONNECT_DELAY);
+                Reconnect();
             }
 
             statusTimer.Continue();
@@ -60,6 +59,11 @@ public:
         else 
             WiFi.begin(LAN_SSID);
         connectionTimer.Start(CONNECTION_TIMEOUT);
+    }
+
+    static void Reconnect() {
+        WiFi.disconnect();
+        connectionTimer.Start(RECONNECT_DELAY);
     }
 
     static void Initialize() {

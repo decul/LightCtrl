@@ -57,6 +57,14 @@ void loop() {
         case Button::CLICK_HOLD:
             light.AdjustColor(4, -0.004);
             break;
+
+        case Button::TRIPLE_CLICK:
+            HandleCommand("reconnect", serialStream);
+            break;
+
+        case Button::QUADRUPLE_CLICK:
+            HandleCommand("reset", serialStream);
+            break;
     }
 }
 
@@ -65,6 +73,7 @@ void loop() {
 void CheckWebRequests() {
     WiFiClient client = WiFiMsgr::Client();
     if (client) {      
+        Serial.println("Got web request");
         String command = WiFiMsgr::ReadMsg(client);
         AnyStream stream(client);
         String response = HandleCommand(command, stream);
@@ -284,6 +293,7 @@ String HandleCommand(String input, AnyStream &stream) {
         stream.Println("void time(string isoTime?);\n");
 
         stream.Println("string wifi();");
+        stream.Println("void reconnect();");
         stream.Println("void rssi();\n");
 
         stream.Println("string gui();");
@@ -297,6 +307,10 @@ String HandleCommand(String input, AnyStream &stream) {
         stream.Println("Signal: " + WiFiMsgr::RSSI());
         stream.Println("IP: " + WiFi.localIP().toString());
         stream.Println("MAC: " + WiFi.macAddress());
+    }
+
+    else if (command == "reconnect") {
+        WiFiMsgr::Reconnect();
     }
 
     else if (command == "rssi") {
