@@ -321,7 +321,7 @@ String HandleCommand(String input, AnyStream &stream) {
         stream.Start(200, true);
         stream.Println("<body style='background: #151515;'>");
         stream.Println("<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>");
-        stream.Println("<script type='text/javascript' src='https://decul.github.io/LightCtrl/scripts.js'></script>");
+        stream.Println("<script type='text/javascript' src='https://decul.github.io/LightCtrlGUI/scripts.js'></script>");
         stream.Println("<script>loadSite()</script></body>");
     }
 
