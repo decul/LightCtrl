@@ -22,6 +22,8 @@ protected:
     bool powerOn = false;
 
     virtual void OnColorChange() { }
+    
+    float Limit(float value);
 
 public:
     Light();

@@ -51,8 +51,6 @@ public:
         pinMode(buttonPin, INPUT_PULLUP);
     }
 
-    long prevClick = 0;
-
     byte GetAction() {
         if (refreshTimer.HasExpired()) {
             switch (state) {

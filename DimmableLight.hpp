@@ -8,10 +8,9 @@ private:
     const static byte STATE_COUNT = 8;
     const static byte UPDATE_PERIOD = 1;
 
-    const float daylightRed = 0.0f;
     const float daylightGreen = 0.84f;
     const float eveningGreen = 0.45f;
-    const float dawnGreen = 0.4f;
+    const float duskGreen = 0.4f;
 
     Time stateStartTimes[STATE_COUNT];
     DateTime stateEndTime;
@@ -25,6 +24,8 @@ private:
     DateTime now;
     float delta;
 
+    byte zone;
+
 
 
     void Initialize() {
@@ -35,7 +36,7 @@ private:
         stateEndTime = now.ClosestDate(StateEndTime(state));
 
         if (state < 4)
-            SetDawnLight();
+            SetDuskLight();
         else if (state < 5)
             SetDaylight();
         else
@@ -71,7 +72,7 @@ private:
 
             case 3:     // Raise to daylight
                 Dim(1.0f);
-                Dim(0, daylightRed);
+                Dim(0, 0.0f);
                 Dim(1, daylightGreen);
                 Dim(2, 1.0f);
                 Dim(3, 1.0f);
@@ -85,9 +86,9 @@ private:
                 Dim(3, 0.0f);
                 break;
 
-            case 7:     // Dim to dawn
+            case 7:     // Dim to dusk
                 Dim(0, 1.0f);
-                Dim(1, dawnGreen);
+                Dim(1, duskGreen);
                 Dim(2, 0.0f);
                 Dim(3, 0.0f);
                 Dim(4, 0.0f);
@@ -181,14 +182,65 @@ public:
 
 
     void SetDaylight() {
-        SetColors(daylightRed, daylightGreen, 1.0f, 1.0f, 1.0f);
+        SetColors(0.0f, daylightGreen, 1.0f, 1.0f, 1.0f);
     }
 
     void SetEveningLight() {
         SetColors(1.0f, eveningGreen, 0.0f, 0.0f, 1.0f);
     }
 
-    void SetDawnLight() {
-        SetColors(1.0f, dawnGreen, 0.0f, 0.0f, 0.0f);
+    void SetDuskLight() {
+        SetColors(1.0f, duskGreen, 0.0f, 0.0f, 0.0f);
+    }
+
+
+    void AdjustDimmer(float difference) {
+        if (zone == 0) {
+            if (difference < 0.0f) {
+                if (lightColor[3] > 0.0f || lightColor[2] > 0.0f)
+                    zone = 3;
+                else if (lightColor[4] > 0.0f)
+                    zone = 2;
+                else 
+                    zone = 1;
+            }
+            else {
+                if (brightness < 0.99f)
+                    zone = 1;
+                else if (lightColor[4] < 0.99f)
+                    zone = 2;
+                else
+                    zone = 3;
+            }
+        }
+
+        // Power(true);
+
+        float value;
+        switch (zone) {
+            case 1:
+                brightness = Limit(brightness + difference);
+                break;
+
+            case 2:
+                value = Limit(lightColor[4] + difference);
+                lightColor[4] = value;
+                lightColor[1] = value * eveningGreen + (1.0f - value) * duskGreen;
+                break;
+
+            case 3:
+                value = Limit(lightColor[3] + difference);
+                lightColor[3] = value;
+                lightColor[2] = value;
+                lightColor[1] = value * daylightGreen + (1.0f - value) * eveningGreen;
+                break;
+        }
+
+        UpdateOutput();
+        OnColorChange();
+    }
+
+    void ResetDimmerZone() {
+        zone = 0;
     }
 };

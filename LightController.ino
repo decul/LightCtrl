@@ -51,15 +51,19 @@ void loop() {
             break;
 
         case Button::HOLD:
-            light.AdjustColor(4, 0.004);
+            light.AdjustDimmer(0.004);
             break;
 
         case Button::CLICK_HOLD:
-            light.AdjustColor(4, -0.004);
+            light.AdjustDimmer(-0.004);
+            break;
+
+        case Button::DOWN:
+            light.ResetDimmerZone();
             break;
 
         case Button::TRIPLE_CLICK:
-            HandleCommand("reconnect", serialStream);
+            WiFiMsgr::Reconnect();
             break;
 
         case Button::QUADRUPLE_CLICK:
@@ -73,7 +77,6 @@ void loop() {
 void CheckWebRequests() {
     WiFiClient client = WiFiMsgr::Client();
     if (client) {      
-        Serial.println("Got web request");
         String command = WiFiMsgr::ReadMsg(client);
         AnyStream stream(client);
         String response = HandleCommand(command, stream);
@@ -216,8 +219,8 @@ String HandleCommand(String input, AnyStream &stream) {
         light.SetDaylight();
     else if (command == "evening")
         light.SetEveningLight();
-    else if (command == "dawn")
-        light.SetDawnLight();
+    else if (command == "dusk" || command == "dawn")    // Leaving 'dawn' for compability
+        light.SetDuskLight();
 
     else if (command == "strobe") {
         if (argsNo == 2) 
@@ -277,7 +280,7 @@ String HandleCommand(String input, AnyStream &stream) {
 
         stream.Println("void output(int led?, int value?);\n");
 
-        stream.Println("void [day/evening/dawn];\n");
+        stream.Println("void [day/evening/dusk];\n");
 
         stream.Println("void dimmer([on/off]);");
         stream.Println("void dimmer([skip], int count?);\n");
@@ -339,7 +342,7 @@ String HandleCommand(String input, AnyStream &stream) {
     }
 
     else if (command == "favicon.ico") {
-        stream.Start(301, true, "Location: https://decul.github.io/LightCtrl/img/rgb.png");
+        stream.Start(301, true, "Location: https://decul.github.io/LightCtrlGUI/img/rgb.png");
     }
 
     else if (command != "status") {

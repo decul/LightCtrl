@@ -16,7 +16,7 @@ void Light::UpdateOutput() {
 }
 
 
-float Limit(float value) {
+float Light::Limit(float value) {
     return max(0.0f, min(1.0f, value));
 }
 
