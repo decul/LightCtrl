@@ -1,10 +1,11 @@
 #include "XmasLight.hpp"
 #include "Button.hpp"
-#include <MillisTime.hpp>
 #include "MyEEPROM.hpp"
 #include "SerialMsgr.hpp"
 #include "WiFiMsgr.hpp"
 #include "AnyStream.hpp"
+#include "Extras.hpp"
+#include <MillisTime.hpp>
 #include <ESP8266HTTPClient.h>
 
 #define k * 1000
@@ -23,9 +24,12 @@ AnyStream serialStream;
 bool ledOff = 1;
 byte ledCounter = 0;
 MicrosTimer ledTimer(0);
+
 MillisTimer dateUpdateTimer(0);
 byte dateUpdateFailCount = 0;
+
 DateTime bootTime;
+
 
 void setup() {
     pinMode(LED_NODE, OUTPUT);
@@ -41,6 +45,7 @@ void loop() {
     CheckSerialMsgs();
     CheckWebRequests();
     CheckDateUpdate();
+    Extras::CheckDzbPing();
     light.DimmerHandle();
     light.XmasHandle();
     //CheckLED();
@@ -343,6 +348,11 @@ String HandleCommand(String input, AnyStream &stream) {
 
     else if (command == "favicon.ico") {
         stream.Start(301, true, "Location: https://decul.github.io/LightCtrlGUI/img/rgb.png");
+    }
+
+    else if (command == "pingdzb") {
+        if (!Extras::PingDzb()) 
+            stream.Respond("DzB Ping Failed", 500);
     }
 
     else if (command != "status") {
