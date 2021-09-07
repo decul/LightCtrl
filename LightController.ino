@@ -45,7 +45,6 @@ void loop() {
     CheckSerialMsgs();
     CheckWebRequests();
     CheckDateUpdate();
-    Extras::CheckDzbPing();
     light.DimmerHandle();
     light.XmasHandle();
     //CheckLED();
@@ -348,11 +347,6 @@ String HandleCommand(String input, AnyStream &stream) {
 
     else if (command == "favicon.ico") {
         stream.Start(301, true, "Location: https://decul.github.io/LightCtrlGUI/img/rgb.png");
-    }
-
-    else if (command == "pingdzb") {
-        if (!Extras::PingDzb()) 
-            stream.Respond("DzB Ping Failed", 500);
     }
 
     else if (command != "status") {
