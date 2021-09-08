@@ -118,11 +118,11 @@ void CheckLED() {
 
 static bool UpdateDate(bool retry = false) {
     HTTPClient http;
-    http.begin("http://worldtimeapi.org/api/timezone/Europe/Warsaw.txt");
+    http.begin("http://worldclockapi.com/api/json/cet/now");
     int code = http.GET();
     if (code == 200) {
         String response = http.getString();
-        response.remove(0, response.indexOf("datetime: ") + 10);
+        response.remove(0, response.indexOf("currentDateTime") + 18);
         response.remove(response.indexOf("+"));
         DateTime date = DateTime::FromISO(response);
         if (date.UnixTime() != 0) {
@@ -303,8 +303,7 @@ String HandleCommand(String input, AnyStream &stream) {
         stream.Println("void reconnect();");
         stream.Println("void rssi();\n");
 
-        stream.Println("string gui();");
-        stream.Println("string web(string[] command);\n");
+        stream.Println("string gui();\n");
 
         stream.Println("string log([e/i/d/clr/test/ ]);\n");
     }
