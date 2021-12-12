@@ -7,8 +7,10 @@
 
 #define COLOR_COUNT 5
 #define PWM_RANGE 4095
-#define LINEAR_COMPONENT 1694
-#define FOURTH_COMPONENT 7
+// #define LINEAR_COMPONENT 1694
+// #define FOURTH_COMPONENT 7
+#define LINEAR_COMPONENT 1070
+#define SQUARE_COMPONENT 55
 
 
 class Light {
@@ -17,7 +19,7 @@ protected:
 
     Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
-    float lightColor[COLOR_COUNT];
+    float lightColor[COLOR_COUNT] = { 0.0, 0.0, 0.0, 1.0, 0.0 };
     float brightness = 1.0f;
     bool powerOn = false;
 
@@ -33,7 +35,7 @@ public:
     void AdjustBrightness(float difference);
     void AdjustColor(byte index, float difference);
     void SetColor(byte index, float value);
-    void SetColors(float* color, byte count = COLOR_COUNT);
+    void SetColors(float* rgbwy, float brightness);
     void SetColors(String* rgbwy, String brightness = "");
     void SetColors(float r, float g, float b, float w, float y);
 

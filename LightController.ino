@@ -47,6 +47,7 @@ void loop() {
     CheckDateUpdate();
     light.DimmerHandle();
     light.XmasHandle();
+    light.HandleColorTransition();
     //CheckLED();
     
     switch (button.GetAction()) {
@@ -60,6 +61,10 @@ void loop() {
 
         case Button::CLICK_HOLD:
             light.AdjustDimmer(-0.004);
+            break;
+
+        case Button::DOUBLE_CLICK:
+            light.SwitchSmartColors();
             break;
 
         case Button::DOWN:
@@ -86,7 +91,7 @@ void CheckWebRequests() {
         String response = HandleCommand(command, stream);
         if (stream.IsNew())
             stream.Print(response);
-        stream.Close(light.GetColors(), Logger::AnyNewErrors());
+        stream.Close(light.GetTargetColors(), Logger::AnyNewErrors());
     }
 }
 
@@ -195,6 +200,17 @@ String HandleCommand(String input, AnyStream &stream) {
         } 
     }
 
+    else if (command == "transit") {
+        if (argsNo == 2 && args[0] == "speed") {
+            light.transitionSpeed = args[1].toFloat();
+            return "OK";
+        }
+        switch (argsNo) {
+            case 6:     light.ColorTransition(args, args[5]);         break;
+            default:    stream.Respond("Wrong arguments", 400);       break;
+        } 
+    }
+
     else if (command == "output") {
         switch (argsNo) {
             case 0:     return light.GetOutputs();
@@ -276,41 +292,49 @@ String HandleCommand(String input, AnyStream &stream) {
     }
 
     else if (command == "?" || command == "help") {
-        stream.Println("void [on/off/switch]\n");
+        stream.Println("on");
+        stream.Println("off");
+        stream.Println("switch \n");
 
-        stream.Println("string color();");
-        stream.Println("void color(int led, float value);");
-        stream.Println("void color(float col[5/6]);\n");
+        stream.Println("color");
+        stream.Println("color <int led> <float value>");
+        stream.Println("color <float[5..6] color> \n");
 
-        stream.Println("void output(int led?, int value?);\n");
+        stream.Println("transit speed <float percent>");
+        stream.Println("transit <float[6] color> \n");
 
-        stream.Println("void [day/evening/dusk];\n");
+        stream.Println("output <int led>? <int value>? \n");
 
-        stream.Println("void dimmer([on/off]);");
-        stream.Println("void dimmer([skip], int count?);\n");
+        stream.Println("day");
+        stream.Println("evening");
+        stream.Println("dusk\n");
 
-        stream.Println("void strobe(float width, int freq);");
-        stream.Println("void strobe([?]);");
-        stream.Println("void rainbow(float width, int freq);");
-        stream.Println("void rainbow([?]);");
-        stream.Println("void flash(int micros);\n");
+        stream.Println("dimmer [on / off]");
+        stream.Println("dimmer skip <int count>? \n");
 
-        stream.Println("void reset();\n");
+        stream.Println("strobe <float width> <int freq>");
+        stream.Println("strobe ?");
+        stream.Println("rainbow <float width> <int freq>");
+        stream.Println("rainbow ?");
+        stream.Println("flash <int micros> \n");
 
-        stream.Println("void time(string isoTime?);\n");
+        stream.Println("reset \n");
 
-        stream.Println("string wifi();");
-        stream.Println("void reconnect();");
-        stream.Println("void rssi();\n");
+        stream.Println("time <string isoTime>? \n");
 
-        stream.Println("string gui();\n");
+        stream.Println("wifi");
+        stream.Println("reconnect");
+        stream.Println("rssi \n");
 
-        stream.Println("string log([e/i/d/clr/test/ ]);\n");
+        stream.Println("gui \n");
+
+        stream.Println("log [e/i/d/clr/test]? \n");
     }
 
     else if (command == "wifi") {
         stream.Println("Status: " + WiFiMsgr::Status());
         stream.Println("Signal: " + WiFiMsgr::RSSI());
+        stream.Println("SSID: " + WiFi.SSID());
         stream.Println("IP: " + WiFi.localIP().toString());
         stream.Println("MAC: " + WiFi.macAddress());
     }

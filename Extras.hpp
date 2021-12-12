@@ -11,15 +11,14 @@ private:
 
 public:
     static bool PingDzb(bool retry = false) {
-        dzbPingTimer.AddTime(30 * 60 * 1000);
-
         HTTPClient http;
         uint32_t start = millis();
-        http.begin("http://dzb.oocs.pl/hello.html");
+        http.begin("http://dzb-test.herokuapp.com/");
         int code = http.GET();
-        if (code < 400) {
+        if (code < 400 && code > 0) {
             uint32_t time = millis() - start;
             Logger::Debug("DzB Ping returned " + String(code) + " in " + String(time) + " ms");
+            dzbPingFailCount = 0;
             return true;
         }
         else {
@@ -27,12 +26,9 @@ public:
         }
 
         if (retry) {
+            dzbPingTimer.Start(60000);
             if (++dzbPingFailCount < 5) {
-                dzbPingTimer.Start(5000);
-            }
-            else {
-                Logger::Error("DzB Ping Failed");
-                dzbPingFailCount = 0;
+                Logger::Error("DzB Ping Failed Fivefold");
             }
         }
 
@@ -41,6 +37,7 @@ public:
 
     static void CheckDzbPing() {
         if (dzbPingTimer.HasExpired() && WiFiMsgr::IsConnected()) {
+            dzbPingTimer.AddMinutes(15);
             PingDzb(true);
         }
     }

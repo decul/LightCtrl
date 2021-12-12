@@ -1,26 +1,31 @@
 #pragma once
 #include <MillisTime.hpp>
-#include "StrobeLight.hpp"
+#include "SmoothLight.hpp"
 #include "MyEEPROM.hpp"
 
-class DimmableLight : public StrobeLight {
-private:
-    const static byte STATE_COUNT = 8;
-    const static byte UPDATE_PERIOD = 1;
+class DimmableLight : public SmoothLight {
 
+protected:
     const float daylightGreen = 0.84f;
     const float eveningGreen = 0.45f;
     const float duskGreen = 0.4f;
+
+
+private:
+    const static byte STATE_COUNT = 8;
+    const static byte UPDATE_PERIOD = 1;
 
     Time stateStartTimes[STATE_COUNT];
     DateTime stateEndTime;
 
     MillisTimer dimmerTimer = MillisTimer(UPDATE_PERIOD * 1000);
     bool dimmerDisabled = false;
-    byte skipCount = 0;
     bool initialized = false;
     byte state = 0;
     
+    bool dimmerSkipped = false;
+    DateTime dimmerSkipEndDate;
+
     DateTime now;
     float delta;
 
@@ -125,7 +130,7 @@ private:
 
 
 public:
-    DimmableLight() : StrobeLight() {
+    DimmableLight() : SmoothLight() {
         stateStartTimes[0].Set(0);
         stateStartTimes[1].Set(6, 00);
         stateStartTimes[2].Set(6, 20);
@@ -146,23 +151,23 @@ public:
         if (!initialized)
             Initialize();
 
-        if (!skipCount && !dimmerDisabled && !StrobeRunning())
+        if (!dimmerSkipped && !dimmerDisabled && !StrobeRunning())
             DimLights();
 
         if (now > stateEndTime) {
             state = (state + 1) % STATE_COUNT;
             stateEndTime = stateEndTime.ClosestDate(StateEndTime(state));
 
-            if (state == 1 && !skipCount && !dimmerDisabled) {
+            if (state == 1 && !dimmerSkipped && !dimmerDisabled) {
                 SetColors(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
                 brightness = 1.0f;
             }
             if (state == 3)
                 DimmerEnable();
-
-            if (skipCount > 0)
-                skipCount--;
         }
+
+        if (dimmerSkipped && now > dimmerSkipEndDate)
+            dimmerSkipped = false;
 
         dimmerTimer.Continue();
     }
@@ -177,34 +182,37 @@ public:
     }
 
     void DimmerSkip(byte count) {
-        skipCount = count;
+        dimmerSkipped = true;
+        dimmerSkipEndDate = stateEndTime.ClosestDate(Time(7)) + TimeSpan(count - 1, 0, 0, 0);
     }
 
 
     void SetDaylight() {
-        SetColors(0.0f, daylightGreen, 1.0f, 1.0f, 1.0f);
+        ColorTransition(0.0f, daylightGreen, 1.0f, 1.0f, 1.0f, 1.0f);
     }
 
     void SetEveningLight() {
-        SetColors(1.0f, eveningGreen, 0.0f, 0.0f, 1.0f);
+        ColorTransition(1.0f, eveningGreen, 0.0f, 0.0f, 1.0f, 1.0f);
     }
 
     void SetDuskLight() {
-        SetColors(1.0f, duskGreen, 0.0f, 0.0f, 0.0f);
+        ColorTransition(1.0f, duskGreen, 0.0f, 0.0f, 0.0f, 1.0f);
+    }
+
+    void SwitchSmartColors() {
+        if (lightColor[3] > 0.0) 
+            SetEveningLight();
+        else 
+            SetDaylight();
     }
 
 
     void AdjustDimmer(float difference) {
+        bool isRising = difference > 0.0f;
+        bool limitReached = false;
+
         if (zone == 0) {
-            if (difference < 0.0f) {
-                if (lightColor[3] > 0.0f || lightColor[2] > 0.0f)
-                    zone = 3;
-                else if (lightColor[4] > 0.0f)
-                    zone = 2;
-                else 
-                    zone = 1;
-            }
-            else {
+            if (isRising) {
                 if (brightness < 0.99f)
                     zone = 1;
                 else if (lightColor[4] < 0.99f)
@@ -212,8 +220,16 @@ public:
                 else
                     zone = 3;
             }
+            else {
+                if (lightColor[3] > 0.0f)
+                    zone = 3;
+                else if (lightColor[4] > 0.0f)
+                    zone = 2;
+                else 
+                    zone = 1;
+            }
         }
-
+        
         // Power(true);
 
         float value;
@@ -224,17 +240,45 @@ public:
 
             case 2:
                 value = Limit(lightColor[4] + difference);
-                lightColor[4] = value;
                 lightColor[1] = value * eveningGreen + (1.0f - value) * duskGreen;
+                lightColor[4] = value;
                 break;
 
             case 3:
                 value = Limit(lightColor[3] + difference);
-                lightColor[3] = value;
-                lightColor[2] = value;
+                lightColor[0] = 1.0 - value;
                 lightColor[1] = value * daylightGreen + (1.0f - value) * eveningGreen;
+                lightColor[2] = value;
+                lightColor[3] = value;
                 break;
         }
+
+
+        if (zone == 1) {
+            if (isRising) 
+                limitReached = brightness == 1.0f;
+        }
+        else if (zone == 2) {
+            if (isRising) 
+                limitReached = lightColor[4] == 1.0f;
+            else 
+                limitReached = lightColor[4] == 0.0f;
+        }
+        else if (zone == 3) {
+            if (isRising) 
+                limitReached = lightColor[3] == 1.0f;
+            else 
+                limitReached = lightColor[3] == 0.0f;
+        }
+
+        if (limitReached) {
+            pwm.setPWM(ledPins[4], 0, PWM_RANGE);
+            delay(1);
+            pwm.setPWM(ledPins[4], 0, 0);
+            delay(1);
+            zone = -1;
+        }
+
 
         UpdateOutput();
         OnColorChange();

@@ -40,16 +40,17 @@ void Light::SetColor(byte index, float value) {
     OnColorChange();
 }
 
-void Light::SetColors(float* rgbwy, byte count) {
-    for (byte l = 0; l < count; l++)
+void Light::SetColors(float* rgbwy, float brightness) {
+    for (byte l = 0; l < COLOR_COUNT; l++)
         lightColor[l] = Limit(rgbwy[l]);
+    this->brightness = Limit(brightness);
     UpdateOutput();
     OnColorChange();
 }
 
 void Light::SetColors(String* rgbwy, String brightness) {
     if (brightness != "")
-        this->brightness = brightness.toFloat();
+        this->brightness = Limit(brightness.toFloat());
     for (byte l = 0; l < COLOR_COUNT; l++)
         lightColor[l] = Limit(rgbwy[l].toFloat());
     UpdateOutput();
@@ -86,9 +87,9 @@ void Light::Switch() {
 }
 
 float LuminosityFunc(float input) {
-    float quartic = pow(FOURTH_COMPONENT * input, 4);
+    float square = pow(SQUARE_COMPONENT * input, 2);
     float linear = LINEAR_COMPONENT * input;
-    return quartic + linear;
+    return square + linear;
 }
 
 uint16_t Light::GetOutput(byte l) {
