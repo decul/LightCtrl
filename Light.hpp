@@ -32,8 +32,6 @@ public:
     
     virtual void UpdateOutput();
 
-    void AdjustBrightness(float difference);
-    void AdjustColor(byte index, float difference);
     void SetColor(byte index, float value);
     void SetColors(float* rgbwy, float brightness);
     void SetColors(String* rgbwy, String brightness = "");

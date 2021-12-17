@@ -20,19 +20,6 @@ float Light::Limit(float value) {
     return max(0.0f, min(1.0f, value));
 }
 
-void Light::AdjustBrightness(float difference) {
-    Power(true);
-    brightness = Limit(brightness + difference);
-    UpdateOutput();
-}
-
-void Light::AdjustColor(byte index, float difference) {
-    Power(true);
-    lightColor[index] = Limit(lightColor[index] + difference);
-    UpdateOutput();
-    OnColorChange();
-}
-
 
 void Light::SetColor(byte index, float value) {
     lightColor[index] = Limit(value);

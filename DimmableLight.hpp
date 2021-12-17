@@ -151,7 +151,7 @@ public:
         if (!initialized)
             Initialize();
 
-        if (!dimmerSkipped && !dimmerDisabled && !StrobeRunning())
+        if (!dimmerSkipped && !dimmerDisabled && !StrobeRunning() && !transitionInProgress)
             DimLights();
 
         if (now > stateEndTime) {

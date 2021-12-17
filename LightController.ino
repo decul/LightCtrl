@@ -316,7 +316,8 @@ String HandleCommand(String input, AnyStream &stream) {
         stream.Println("strobe ?");
         stream.Println("rainbow <float width> <int freq>");
         stream.Println("rainbow ?");
-        stream.Println("flash <int micros> \n");
+        stream.Println("flash <int micros>");
+        stream.Println("xmas <int millis>? \n");
 
         stream.Println("reset \n");
 

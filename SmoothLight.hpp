@@ -7,8 +7,10 @@ private:
     
     float targetColor[COLOR_COUNT];
     float targetBrightness;
-    bool transitionInProgres = false;
     MillisTimer transitionTimer;
+
+protected:
+    bool transitionInProgress = false;
 
 public:
     float transitionSpeed = 0.01;
@@ -33,12 +35,12 @@ public:
         targetColor[4] = Limit(y);
         targetBrightness = Limit(brightness);
 
-        transitionInProgres = true;
+        transitionInProgress = true;
         transitionTimer.Start(10);
     }
 
     void HandleColorTransition() {
-        if (transitionInProgres && transitionTimer.HasExpired()) {
+        if (transitionInProgress && transitionTimer.HasExpired()) {
             float maxDelta = targetBrightness - brightness;
             maxDelta = fabs(maxDelta);
             for (byte i = 0; i < COLOR_COUNT; i++) {
@@ -48,7 +50,7 @@ public:
             }
             
             if (maxDelta == 0.0) {
-                transitionInProgres = false;
+                transitionInProgress = false;
                 if (transitionSpeed < 0.01)
                     transitionSpeed = 0.01;
                 return;
@@ -81,6 +83,15 @@ public:
         for (byte l = 0; l < COLOR_COUNT; l++) 
             str += String(targetColor[l], 3) + " ";
         return str + String(targetBrightness, 3);
+    }
+
+
+    void OnColorChange() { 
+        if (!transitionInProgress) {
+            memcpy(targetColor, lightColor, COLOR_COUNT);
+            targetBrightness = brightness;
+        }
+        StrobeLight::OnColorChange();
     }
 
 };
